@@ -1,0 +1,25 @@
+# Salida de la compilación (se regenera con python3 tools/build.py)
+dist/
+
+# Dependencias de Node
+node_modules/
+
+# Datos de postulantes. Nunca deben quedar en el repositorio.
+postulaciones/
+*.xlsx
+*.xls
+*.csv
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# Registros y variables locales
+*.log
+.env
+.env.*

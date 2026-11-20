@@ -1,0 +1,52 @@
+# Publica el sitio en GitHub Pages cada vez que se sube un cambio a la rama main.
+# Solo se publican index.html, css/, js/ y assets/. Las carpetas backend/, tests/,
+# tools/ y docs/ quedan en el repositorio, pero no en el sitio público.
+#
+# Requisito: en Settings > Pages > Build and deployment, elegir "GitHub Actions" como origen.
+#
+# Las versiones de las acciones (v4, v5, v3) son las conocidas al escribir este archivo.
+# Revise si existen versiones mayores más recientes en github.com/actions y actualícelas.
+
+name: Publicar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v4
+
+      - name: Reunir los archivos públicos
+        run: |
+          mkdir _site
+          cp index.html _site/
+          cp -r css js assets _site/
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir el sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Desplegar
+        id: despliegue
+        uses: actions/deploy-pages@v4
