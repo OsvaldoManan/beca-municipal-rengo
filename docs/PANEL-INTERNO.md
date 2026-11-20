@@ -1,0 +1,48 @@
+# Panel interno de admisibilidad y nómina
+
+El panel trabaja sobre la misma hoja de cálculo que recibe las postulaciones. Calcula el puntaje del artículo 16, ordena la nómina y aplica el desempate del artículo 17. No decide la admisibilidad, no realiza sorteos y no envía correos.
+
+## Instalación
+
+1. Abra el proyecto de Apps Script donde está `Code.gs`.
+2. Agregue dos archivos de secuencia de comandos y pegue el contenido de `backend/Puntaje.gs` y `backend/Panel.gs`.
+3. En `Panel.gs` indique en `CUPOS` el número de becas que permite el presupuesto del año. Con `0` la nómina se ordena pero no marca seleccionados.
+
+El menú «Beca Municipal» aparece en la hoja solo si el proyecto fue creado desde ella (Extensiones > Apps Script). En un proyecto independiente ejecute las funciones desde el editor.
+
+## Uso
+
+| Paso | Quién | Qué hace |
+| --- | --- | --- |
+| 1. Preparar columnas de revisión (`prepararRevision`) | Profesional a cargo | Agrega las columnas «Admisible», «Motivo de inadmisibilidad» y «Residencia rural» al final de la hoja |
+| 2. Revisar cada postulación | Profesionales de DIDECO (artículo 12) | Abre la carpeta, verifica los documentos y marca «Admisible» con Sí o No. Si es No, escribe el motivo. Marca «Residencia rural» cuando corresponda |
+| 3. Corregir datos no acreditados | Profesionales de DIDECO | El puntaje usa lo declarado en el formulario. Si una credencial, el tramo o el promedio no coinciden con los documentos, se corrige la celda |
+| 4. Generar nómina (`generarNomina`) | Profesional a cargo | Escribe las pestañas «Nómina», «Inadmisibles» y «Pendientes». Se puede repetir las veces que sea necesario |
+
+## Lectura de la pestaña «Nómina»
+
+| Columna | Significado |
+| --- | --- |
+| Lugar | Posición por puntaje. Las postulaciones en empate total comparten lugar |
+| Puntos rendimiento, RSH y vulnerabilidad | Calificación de 0 a 100 en cada criterio, antes de ponderar |
+| Puntaje final | Suma ponderada 40%, 45% y 15% |
+| Desempate | «Resuelto por artículo 17» cuando el orden entre puntajes iguales lo definió una prioridad. «Empate total» cuando ninguna prioridad los separa |
+| Estado | «Seleccionado», «Lista de espera», «Requiere sorteo» o «Admisible» si no hay cupos definidos |
+| Monto | $400.000 para cada seleccionado. Junto a nombre, RUT y puntaje forma la tabla que exige el artículo 19 para el decreto |
+
+«Requiere sorteo» aparece solo cuando un grupo en empate total queda a ambos lados del último cupo. El sorteo lo realiza la comisión y su resultado se registra fuera del panel.
+
+## Criterios de lectura de la tabla del artículo 16
+
+La regla está en `js/puntaje.js` y su copia `backend/Puntaje.gs`. Donde la tabla no es explícita se adoptaron estos criterios, que el Comité Técnico Evaluador debe confirmar antes de usar la nómina.
+
+1. Los promedios se comparan con un decimal.
+2. Un NEM de 6,6 recibe 100 puntos. La tabla dice «sobre 6,6» y el tramo anterior termina en 6,5, de modo que 6,6 quedaría sin puntaje. La lectura contraria se activa cambiando una constante.
+3. Los tramos 90% y 100% del Registro Social de Hogares reciben 0 puntos.
+4. En vulnerabilidad se asigna el puntaje más alto que corresponda, sin sumar.
+
+Si se cambia la regla, edite `js/puntaje.js`, cópielo sobre `backend/Puntaje.gs` y ejecute `node tests/puntaje.test.js`.
+
+## Límites
+
+El panel se probó con servicios de Google simulados. La lectura y escritura real en la hoja debe verificarse con postulaciones ficticias antes de abril.

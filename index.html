@@ -185,15 +185,28 @@
       <tr><td>Familiar con credencial de discapacidad</td><td class="n">75</td></tr>
     </tbody>
   </table></div>
-  <div class="ejemplo">
-    <h3>Un ejemplo de cálculo</h3>
-    <p>Estudiante de primer año con NEM 6,4, hogar en el tramo del 40% y sin credenciales.</p>
-    <dl>
-      <dt>Rendimiento, 75 puntos por 0,40</dt><dd>30</dd>
-      <dt>Registro Social de Hogares, 100 puntos por 0,45</dt><dd>45</dd>
-      <dt>Vulnerabilidad, 0 puntos por 0,15</dt><dd>0</dd>
-      <dt class="tot">Puntaje final</dt><dd class="tot">75</dd>
+  <div class="ejemplo simulador" id="simulador">
+    <h3>Calcule su puntaje estimado</h3>
+    <p>Cambie los datos y el cálculo se actualiza. El ejemplo inicial corresponde a un estudiante de primer año con NEM 6,4 y hogar en el tramo del 40%.</p>
+    <div class="campos">
+      <div class="campo"><label for="simAnio">Año que cursa</label><select id="simAnio"><option value="1">Primer año</option><option value="2">Segundo año o superior</option></select></div>
+      <div class="campo"><label for="simProm" id="simPromLabel">Promedio NEM (1° a 4° medio)</label><input type="text" inputmode="decimal" id="simProm" value="6,4" autocomplete="off"></div>
+      <div class="campo"><label for="simTramo">Tramo del Registro Social de Hogares</label><select id="simTramo"><option>40%</option><option>50%</option><option>60%</option><option>70%</option><option>80%</option><option>90%</option><option>100%</option></select></div>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="simDisc"> Tengo credencial de discapacidad.</label>
+      <label><input type="checkbox" id="simCuid"> Tengo credencial de cuidador.</label>
+      <label><input type="checkbox" id="simFam"> Mi familia participa en el programa Familias, Seguridades y Oportunidades.</label>
+      <label><input type="checkbox" id="simDiscFam"> Alguien de mi grupo familiar tiene credencial de discapacidad.</label>
+    </div>
+    <dl aria-live="polite">
+      <dt id="simRt">Rendimiento, 75 puntos por 0,40</dt><dd id="simR">30</dd>
+      <dt id="simSt">Registro Social de Hogares, 100 puntos por 0,45</dt><dd id="simS">45</dd>
+      <dt id="simVt">Vulnerabilidad, 0 puntos por 0,15</dt><dd id="simV">0</dd>
+      <dt class="tot">Puntaje estimado</dt><dd class="tot" id="simTotal">75</dd>
     </dl>
+    <p class="msj" id="simAviso" hidden></p>
+    <p class="ayuda">Esta estimación es referencial y no se guarda. El puntaje oficial lo asigna el Comité Técnico Evaluador con los antecedentes acreditados. Un NEM de 6,6 se calcula aquí en el tramo superior.</p>
   </div>
   <p class="nota">Ante un empate tienen prioridad, en este orden, quienes cuentan con credencial de discapacidad o de cuidador, quienes participan del programa Familias, Seguridades y Oportunidades y quienes viven en sectores rurales de la comuna. Si la igualdad continúa se resuelve por sorteo.</p>
 </section>
@@ -375,6 +388,8 @@
   <div class="w"><div class="pie-base"><span>Ilustre Municipalidad de Rengo, Región de O'Higgins</span><span class="credito">Sitio web desarrollado por Osvaldo Mañán Arce</span></div></div>
 </footer>
 </div>
+<script src="js/puntaje.js"></script>
+<script src="js/simulador.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

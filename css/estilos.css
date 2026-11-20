@@ -262,3 +262,9 @@ input:hover,select:hover{border-color:var(--azul)}
 .doc{position:relative}
 #borradorAviso,#exito{margin-bottom:1.5rem}
 .checks input[aria-invalid="true"]{outline:2px solid var(--coral);outline-offset:2px}
+
+/* Simulador de puntaje */
+.simulador .campos{margin-top:var(--e2)}
+.simulador .checks{margin-top:var(--e2)}
+.simulador dl{border-top:1px solid var(--tinta);padding-top:var(--e3)}
+.simulador #simTotal{font:500 1.6rem/1 var(--serif)}

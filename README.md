@@ -62,10 +62,11 @@ Las pruebas requieren Node.js.
 ```bash
 node tests/rut.test.js
 node tests/backend.test.js
+node tests/puntaje.test.js
 node tests/formulario.e2e.js
 ```
 
-La primera verifica la validación del RUT. La segunda ejecuta el servicio de recepción contra servicios de Google simulados. La tercera recorre el formulario de principio a fin en un navegador y requiere Playwright con Chromium instalado.
+La primera verifica la validación del RUT. La segunda ejecuta el servicio de recepción contra servicios de Google simulados. La de puntaje verifica la regla del artículo 16 y el armado de la nómina. La última recorre el formulario de principio a fin en un navegador y requiere Playwright con Chromium instalado.
 
 ## Cómo funciona la postulación
 
@@ -97,3 +98,7 @@ Desarrollado por Osvaldo Mañán Arce para la Dirección de Desarrollo Comunitar
 Los logos de la carpeta `assets/` pertenecen a la Ilustre Municipalidad de Rengo. Se incluyen solo para el uso institucional de este sitio y no pueden reutilizarse sin autorización del municipio.
 
 Este repositorio no incluye una licencia. Su titular definirá las condiciones de uso del código.
+
+## Simulador y panel interno
+
+La sección de puntaje del sitio incluye un simulador para el postulante. La misma regla (`js/puntaje.js`, copiada en `backend/Puntaje.gs`) alimenta el panel interno que ordena la nómina de admisibles. Vea `docs/PANEL-INTERNO.md`.

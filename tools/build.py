@@ -4,14 +4,13 @@ import base64, pathlib, re
 r = pathlib.Path(__file__).resolve().parent.parent
 html = (r / "index.html").read_text(encoding="utf8")
 css = (r / "css/estilos.css").read_text(encoding="utf8")
-js = (r / "js/app.js").read_text(encoding="utf8")
 def uri(m):
     p = r / m.group(1)
     mime = {"webp": "image/webp", "png": "image/png", "svg": "image/svg+xml"}[p.suffix[1:]]
     return 'src="data:%s;base64,%s"' % (mime, base64.b64encode(p.read_bytes()).decode())
 html = re.sub(r'src="(assets/[^"]+)"', uri, html)
 html = html.replace('<link rel="stylesheet" href="css/estilos.css">', "<style>\n" + css + "</style>")
-html = html.replace('<script src="js/app.js"></script>', "<script>\n" + js + "</script>")
+html = re.sub(r'<script src="(js/[^"]+)"></script>', lambda m: "<script>\n" + (r / m.group(1)).read_text(encoding="utf8") + "</script>", html)
 (r / "dist").mkdir(exist_ok=True)
 (r / "dist/beca-municipal-rengo.html").write_text(html, encoding="utf8")
 # Fragmento sin <html>/<head>/<body>, para vista previa como artefacto
