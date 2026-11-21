@@ -64,6 +64,7 @@ Las pruebas requieren Node.js.
 node tests/rut.test.js
 node tests/backend.test.js
 node tests/puntaje.test.js
+node tests/asistente.test.js
 node tests/formulario.e2e.js
 ```
 
@@ -103,3 +104,7 @@ Este repositorio no incluye una licencia. Su titular definirá las condiciones d
 ## Simulador y panel interno
 
 La sección de puntaje del sitio incluye un simulador para el postulante. La misma regla (`js/puntaje.js`, copiada en `backend/Puntaje.gs`) alimenta el panel interno que ordena la nómina de admisibles. Vea `docs/PANEL-INTERNO.md`.
+
+## Asistente de consultas
+
+El sitio incluye una ventana de consultas sobre la ordenanza (`js/asistente.js`). No usa inteligencia artificial generativa ni servicios externos. Busca la respuesta más cercana entre las 39 de `js/ordenanza.js`, cada una con su artículo de origen, y cuando no encuentra una lo dice y deriva al correo de la beca. Las preguntas no se guardan ni se envían. Para corregir o agregar respuestas edite `js/ordenanza.js` y ejecute `node tests/asistente.test.js`.

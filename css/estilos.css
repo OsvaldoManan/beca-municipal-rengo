@@ -304,3 +304,33 @@ input:hover,select:hover{border-color:var(--azul)}
 @keyframes f-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes f-borla{0%,100%{transform:rotate(9deg)}50%{transform:rotate(-9deg)}}
 .cab .w{align-items:center}
+
+/* Asistente de consultas (lo crea js/asistente.js) */
+.asis-boton{position:fixed;z-index:20;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--marino);color:#fff;border:0;border-radius:999px;padding:.8rem 1.25rem;font:600 var(--t-s)/1.2 var(--sans);cursor:pointer;box-shadow:0 2px 10px rgba(27,58,99,.28)}
+.asis-boton:hover{background:var(--azul)}
+.asis-panel{position:fixed;z-index:21;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(24rem,calc(100vw - 32px));height:min(34rem,calc(100% - 32px));display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--superficie);border:1px solid var(--marino);box-shadow:0 8px 30px rgba(27,58,99,.25);font:400 var(--t-s)/1.5 var(--sans)}
+.asis-cab{display:flex;justify-content:space-between;align-items:center;gap:var(--e3);background:var(--marino);color:#fff;padding:.8rem 1rem}
+.asis-cab strong{display:block;font:500 1.15rem/1.2 var(--serif)}
+.asis-cab span{font-size:var(--t-xs);color:#C9D6E6}
+.asis-cerrar{background:none;border:1px solid rgba(255,255,255,.5);color:#fff;font:600 var(--t-xs) var(--sans);padding:.35rem .7rem;cursor:pointer;border-radius:3px}
+.asis-cab :focus-visible{outline-color:#fff}
+.asis-registro{overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.7rem;background:var(--fondo)}
+.asis-msj{max-width:90%;padding:.65rem .85rem;display:grid;gap:.35rem}
+.asis-msj p{margin:0;text-align:left}
+.asis-bot{background:var(--superficie);border:1px solid var(--borde);align-self:flex-start}
+.asis-yo{background:var(--azul-pastel);align-self:flex-end}
+.asis-fuente{font-size:var(--t-xs);color:var(--tinta-suave)}
+.asis-msj a{font-weight:600}
+.asis-sugeridas{display:flex;flex-wrap:wrap;gap:.4rem}
+.asis-sugeridas button{background:var(--superficie);border:1px solid var(--azul);color:var(--azul);font:600 var(--t-xs)/1.3 var(--sans);padding:.4rem .7rem;border-radius:999px;cursor:pointer;text-align:left}
+.asis-sugeridas button:hover{background:var(--azul-pastel)}
+.asis-form{display:flex;gap:.5rem;padding:.7rem;border-top:1px solid var(--borde)}
+.asis-form input{flex:1;min-width:0;font:inherit;color:var(--tinta);border:1px solid var(--control,#8FA5C0);border-radius:3px;padding:.55rem .7rem;background:var(--superficie)}
+.asis-form button{background:var(--azul);color:#fff;border:0;border-radius:3px;font:600 var(--t-s) var(--sans);padding:.55rem .9rem;cursor:pointer}
+.asis-oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media print{.asis-boton,.asis-panel{display:none}}
+
+/* Ilustración de estudiantes */
+.estudiantes{margin:0;display:grid;gap:var(--e3)}
+.estudiantes svg{display:block;width:100%;height:auto;max-width:46rem}
+.estudiantes figcaption{font-size:var(--t-s);color:var(--tinta-suave)}
