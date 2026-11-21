@@ -41,7 +41,7 @@ a:hover{color:var(--azul-hover)}
 .cinta i{display:block}
 .cinta i:nth-child(1){flex:5;background:var(--azul)}.cinta i:nth-child(2){flex:3;background:var(--azul-medio)}
 .cinta i:nth-child(3){flex:2;background:var(--verde-medio)}.cinta i:nth-child(4){flex:1.5;background:var(--durazno-medio)}.cinta i:nth-child(5){flex:1;background:var(--coral-medio)}
-@media(max-width:640px){.franja span{display:none}.franja .logo{height:42px}.franja .w{padding-block:var(--e3)}}
+@media(max-width:640px){.franja span{display:none}.franja .logo{height:36px}.franja .w{padding-block:.6rem}}
 
 /* ───────── cabecera ───────── */
 .cab{background:var(--azul-pastel);border-bottom:1px solid #CBDAEC}
@@ -198,6 +198,7 @@ details[open] summary::after{content:"−"}
 details p{padding:0 0 var(--e5)}
 
 /* ───────── formulario ───────── */
+.zona[hidden]{display:none}
 .zona{display:grid;grid-template-columns:minmax(0,1fr) 13.5rem;gap:var(--e7);align-items:start}
 form{display:grid;gap:var(--e7);min-width:0}
 fieldset{border:0;border-top:1px solid var(--tinta);padding:var(--e4) 0 0;margin:0;display:grid;gap:var(--e5);min-width:0}
@@ -390,21 +391,28 @@ input:hover,select:hover{border-color:var(--azul)}
 .cifras dd{margin:0;font:500 1.6rem/1.2 var(--serif);font-variant-numeric:tabular-nums}
 
 /* Sitio en construcción: cinta de franjas amarillas y negras y cuenta regresiva */
-.obra{background:#FFF6CF;color:#1B1B1B}
+.obra{background:var(--marino);color:#fff}
 .obra[hidden]{display:none}
-.obra-cinta{height:14px;background:repeating-linear-gradient(-45deg,#F4C300 0 18px,#1B1B1B 18px 36px);background-size:50.91px 100%}
 .obra-cuerpo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--e3) var(--e6);padding-block:var(--e3)}
 .obra p{margin:0;display:grid;gap:.1rem;min-width:0}
-.obra p b{font:700 var(--t-s)/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase}
-.obra p span{font-size:var(--t-s);line-height:1.4}
-.cuenta{display:flex;gap:.5rem}
-.cuenta div{background:#1B1B1B;color:#F4C300;min-width:4.1rem;padding:.45rem .5rem .4rem;text-align:center;display:grid;gap:.15rem}
-.cuenta b{font:600 1.55rem/1 var(--sans);font-variant-numeric:tabular-nums}
-.cuenta span{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:#fff}
-@media(max-width:560px){.cuenta{width:100%}.cuenta div{flex:1;min-width:0}.cuenta b{font-size:1.3rem}}
-@media(prefers-reduced-motion:no-preference){.obra-cinta{animation:obra-avance 2.4s linear infinite}.obra-cinta:last-child{animation-direction:reverse}}
-@keyframes obra-avance{to{background-position:50.91px 0}}
-:root.contraste .obra{background:#fff;border-bottom:2px solid #000}
+.obra p b{font:700 var(--t-xs)/1.3 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--azul-medio)}
+.obra p span{font-size:var(--t-s);line-height:1.4;color:#E6EDF6}
+.obra p span em{font-style:normal}
+.cuenta{display:flex;gap:.4rem}
+.cuenta div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;min-width:3.6rem;padding:.35rem .45rem .3rem;text-align:center;display:grid;gap:.1rem;border-radius:3px}
+.cuenta b{font:600 1.3rem/1 var(--sans);font-variant-numeric:tabular-nums}
+.cuenta span{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#C9D6E6}
+/* En pantallas angostas el aviso ocupa una sola franja: texto breve y solo los días */
+@media(max-width:640px){
+  .obra-cuerpo{flex-wrap:nowrap;gap:var(--e3);padding-block:.55rem}
+  .obra p b{display:none}
+  .obra p span{font-size:var(--t-xs);line-height:1.35}
+  .obra p span em{display:none}
+  .cuenta div:not(:first-child){display:none}
+  .cuenta div{min-width:3.2rem;padding:.3rem .4rem}
+  .cuenta b{font-size:1.15rem}
+}
+:root.contraste .obra{background:#000;border-bottom:2px solid #fff}
 @media print{.obra,.acc{display:none}}
 
 /* Formulario por pasos (js/pasos.js) */
@@ -463,3 +471,27 @@ main>section>.enc h2:focus{outline:none}
 .encuesta .escala{display:flex;gap:.4rem;flex-wrap:wrap}
 .encuesta .escala label{display:flex;align-items:center;gap:.35rem;border:1px solid var(--control,#8FA5C0);border-radius:3px;padding:.4rem .7rem;background:var(--superficie);cursor:pointer;font-weight:400}
 .encuesta textarea{width:100%;min-height:5rem;font:inherit;color:var(--tinta);border:1px solid var(--control,#8FA5C0);border-radius:3px;padding:.6rem .75rem;background:var(--superficie)}
+
+/* Cabecera en el celular: Menú a la izquierda y Postular a la derecha en una sola fila.
+   Los botones de accesibilidad pasan al panel del menú y aparecen al abrirlo. */
+@media(max-width:640px){
+  .menu .w{flex-wrap:wrap}
+  .menu-boton{order:1}
+  .menu-cta{order:2;margin-left:auto}
+  .menu .acc{order:6;flex:0 0 100%;margin-left:0;padding:.7rem 0 .3rem;display:none}
+  .menu:has(.navegacion:not([hidden])) .acc{display:flex}
+  .menu .acc button{min-height:2.75rem;min-width:2.75rem;padding:.4rem .8rem}
+  .menu-boton,.menu-cta{min-height:2.75rem}
+}
+
+/* Botón de consultas en el celular: un círculo con signo de pregunta, para no tapar el contenido */
+@media(max-width:640px){
+  .asis-boton{width:3.25rem;height:3.25rem;padding:0;font-size:0;display:grid;place-items:center}
+  .asis-boton::before{content:"?";font:700 1.45rem/1 var(--sans)}
+  body{padding-bottom:4.5rem}
+}
+
+/* Texto justificado solo en columnas anchas. En columnas angostas y en el celular,
+   la justificación deja espacios irregulares entre palabras, así que se alinea a la izquierda. */
+.razon p{text-align:left}
+@media(max-width:640px){.prosa p,details p{text-align:left}}

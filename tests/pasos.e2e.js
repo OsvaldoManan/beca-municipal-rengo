@@ -14,6 +14,8 @@ const BASE = "file://" + path.join(__dirname, "..", "index.html");
     // Las pruebas corren en modo de revisión: se vacía ENDPOINT para no enviar nada al servicio real.
     await page.route("**/js/app.js", route => route.fulfill({ contentType: "text/javascript",
       body: fs.readFileSync(path.join(__dirname, "..", "js", "app.js"), "utf8").replace(/const ENDPOINT = "[^"]*";/, 'const ENDPOINT = "";') }));
+    await page.route("**/js/complementos.js", route => route.fulfill({ contentType: "text/javascript",
+      body: fs.readFileSync(path.join(__dirname, "..", "js", "complementos.js"), "utf8").replace(/var PLAZO_CERRAR_FORMULARIO = (true|false);/, "var PLAZO_CERRAR_FORMULARIO = false;") }));
     await page.goto(BASE + vista); await page.waitForSelector("#pasosModo", { state: "attached" });
     await fn(page);
     assert.deepStrictEqual(errores, []);

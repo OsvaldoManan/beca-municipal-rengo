@@ -7,7 +7,9 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const CODIGO = fs.readFileSync(path.join(__dirname, "..", "backend", "Code.gs"), "utf8");
+// Las pruebas fijan CONTROLAR_PLAZO en false para no depender de la fecha. El caso del plazo lo activa aparte.
+const CODIGO_REAL = fs.readFileSync(path.join(__dirname, "..", "backend", "Code.gs"), "utf8");
+const CODIGO = CODIGO_REAL.replace(/const CONTROLAR_PLAZO = (true|false);/, "const CONTROLAR_PLAZO = false;");
 const PDF = Buffer.from("%PDF-1.4\nprueba\n%%EOF\n").toString("base64");
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 const OBLIGATORIOS = ["cedula", "alumno_regular", "notas", "rsh", "residencia", "declaracion"];
@@ -192,8 +194,8 @@ caso("plazo del artículo 9 en hora de Chile y control activable", () => {
   assert.strictEqual(en("2027-03-31T02:59:00Z"), true, "30 de marzo 23:59 en Chile");
   assert.strictEqual(en("2027-03-31T03:01:00Z"), false, "31 de marzo en Chile");
   assert.strictEqual(en("2026-03-15T15:00:00Z"), false, "otro año");
-  assert.ok(CODIGO.includes("const CONTROLAR_PLAZO = false;"));
-  const activo = entorno({ codigo: CODIGO.replace("const CONTROLAR_PLAZO = false;", "const CONTROLAR_PLAZO = true;") });
+  assert.ok(/const CONTROLAR_PLAZO = (true|false);/.test(CODIGO_REAL));
+  const activo = entorno({ codigo: CODIGO.replace(/const CONTROLAR_PLAZO = (true|false);/, "const CONTROLAR_PLAZO = true;") });
   const r = activo.post(postulacion()), hoyEnPlazo = activo.ctx.enPlazo(new Date());
   assert.strictEqual(r.ok, hoyEnPlazo); if (!hoyEnPlazo) assert.match(r.error, /1 al 30 de marzo de 2027/);
 });

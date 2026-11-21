@@ -29,6 +29,9 @@ async function abrir(browser, { endpoint, respuesta, ancho } = {}) {
   const page = await ctx.newPage();
   const errores = [], envios = [];
   page.on("pageerror", e => errores.push(String(e)));
+  // El formulario se prueba siempre abierto, aunque hoy esté fuera del plazo del artículo 9.
+  await page.route("**/js/complementos.js", route => route.fulfill({ contentType: "text/javascript",
+    body: fs.readFileSync(path.join(RAIZ, "js", "complementos.js"), "utf8").replace(/var PLAZO_CERRAR_FORMULARIO = (true|false);/, "var PLAZO_CERRAR_FORMULARIO = false;") }));
   // ENDPOINT es una constante, por eso se reemplaza en el archivo mientras se carga.
   // Siempre se reemplaza, para que las pruebas nunca envíen datos al servicio real.
   await page.route("**/js/app.js", route => {

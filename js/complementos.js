@@ -3,10 +3,10 @@
 
 // Año del proceso que se muestra en los avisos. Debe coincidir con ANIO_PROCESO de backend/Code.gs.
 var PLAZO_ANIO = 2027;
-// Con true, el formulario se oculta fuera del 1 al 30 de marzo. Déjelo en false mientras el sitio esté en revisión.
-var PLAZO_CERRAR_FORMULARIO = false;
+// Con true, el formulario se oculta fuera del 1 al 30 de marzo (artículo 9). Debe ir junto con CONTROLAR_PLAZO en backend/Code.gs.
+var PLAZO_CERRAR_FORMULARIO = true;
 
-// Con true se muestra el banner «Sitio en construcción» con la cuenta regresiva, hasta la apertura del 1 de marzo.
+// Con true se muestra el aviso «Próxima apertura» con la cuenta regresiva, hasta la apertura del 1 de marzo.
 // Cámbielo a false para retirarlo antes.
 var SITIO_EN_CONSTRUCCION = true;
 
@@ -76,9 +76,11 @@ function hoyEnChile() {
     if (e.fase === "antes") texto = "La postulación " + PLAZO_ANIO + " abre el 1 de marzo. Faltan " + dias(e.dias) + ".";
     else if (e.fase === "abierto") texto = e.dias === 0 ? "Hoy es el último día para postular." : "Postulación abierta. Quedan " + dias(e.dias) + " para el cierre del 30 de marzo.";
     else texto = "La postulación " + PLAZO_ANIO + " cerró el 30 de marzo.";
+    var cerrado = PLAZO_CERRAR_FORMULARIO && e.fase !== "abierto";
+    if (cerrado) texto += e.fase === "antes" ? " El formulario estará disponible desde ese día." : " El formulario ya no recibe postulaciones.";
     avisos.forEach(function (a) { a.textContent = texto; a.hidden = false; a.dataset.fase = e.fase; });
     var zona = document.querySelector(".zona");
-    if (PLAZO_CERRAR_FORMULARIO && e.fase !== "abierto" && zona) zona.hidden = true;
+    if (cerrado && zona) zona.hidden = true;
   }
 
   /* ── Lista de verificación previa ── */

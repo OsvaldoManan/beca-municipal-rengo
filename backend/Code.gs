@@ -36,7 +36,7 @@ const CORREO_BECA = 'becaestudiantil@munirengo.cl';
 const ANIO_PROCESO = 2027;
 // Plazo del artículo 9. Con CONTROLAR_PLAZO en true se rechazan envíos fuera del 1 al 30 de marzo
 // de ANIO_PROCESO, según la hora de Chile continental.
-const CONTROLAR_PLAZO = false;
+const CONTROLAR_PLAZO = true;
 const ZONA_HORARIA = 'America/Santiago';
 
 const MAX_BYTES = 5 * 1024 * 1024;          // por archivo
