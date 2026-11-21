@@ -65,6 +65,14 @@ const COLUMNAS = ['Folio', 'Fecha de recepción', 'Nombres', 'Apellidos', 'RUT',
   'Credencial discapacidad', 'Credencial discapacidad familiar', 'Credencial cuidador', 'Programa Familias',
   'Grupo familiar', 'Documentos recibidos', 'Carpeta', 'Observaciones'];
 
+// Columnas que agrega el equipo de DIDECO al revisar (ver Panel.gs). Van a continuación de COLUMNAS.
+const COLUMNAS_REVISION = ['Admisible', 'Motivo de inadmisibilidad', 'Residencia rural', 'Resultado'];
+
+// Con true, el asistente del sitio puede registrar las consultas que no supo responder (pestaña «Consultas sin respuesta»).
+// Se guarda solo el texto de la consulta y la fecha. Debe activarse también REGISTRAR_CONSULTAS en js/asistente.js.
+const REGISTRAR_CONSULTAS = false;
+const HOJA_CONSULTAS = 'Consultas sin respuesta';
+
 const MSJ_INTERNO = 'No fue posible registrar su postulación por un problema del sistema. ' +
   'Intente nuevamente en unos minutos y, si el problema continúa, escriba a ' + CORREO_BECA + '.';
 
@@ -84,6 +92,14 @@ function doPost(e) {
   var candado = null;
   var conCandado = false;
   try {
+    // Solicitudes livianas que no son postulaciones: estado por folio y consultas sin respuesta del asistente.
+    var cuerpo = e && e.postData && e.postData.contents;
+    if (typeof cuerpo === 'string' && cuerpo.length < 2000 && /"tipo"\s*:\s*"(estado|consulta)"/.test(cuerpo)) {
+      var liviana = leerSolicitud(e);
+      if (liviana.tipo === 'estado') return responder(consultarEstado(liviana.folio, liviana.rut));
+      if (liviana.tipo === 'consulta') return responder(registrarConsulta(liviana.texto));
+    }
+
     if (CONTROLAR_PLAZO && !enPlazo(new Date())) {
       return rechazar('El período de postulación es del 1 al 30 de marzo de ' + ANIO_PROCESO + '.');
     }
@@ -373,6 +389,44 @@ function rutValido(r) {
   for (var i = r.length - 2; i >= 0; i--) { s += Number(r[i]) * m; m = m === 7 ? 2 : m + 1; }
   var dv = 11 - (s % 11);
   return r.slice(-1) === (dv === 11 ? '0' : dv === 10 ? 'K' : String(dv));
+}
+
+/**
+ * Estado de una postulación. Exige folio y RUT a la vez y solo devuelve el estado, nunca datos personales.
+ * Lee las columnas «Admisible» y «Resultado» que completa DIDECO.
+ */
+function consultarEstado(folio, rut) {
+  folio = texto(folio, 20).toUpperCase();
+  if (!/^BMR-\d{4}-\d{4}$/.test(folio) || !rutValido(texto(rut, 15))) {
+    return { ok: false, error: 'Revise el folio y el RUT. El folio tiene la forma BMR-' + ANIO_PROCESO + '-0001 y viene en su comprobante.' };
+  }
+  var hoja = SpreadsheetApp.openById(HOJA_ID).getSheets()[0];
+  var n = hoja.getLastRow() - 1;
+  var filas = n > 0 ? hoja.getRange(2, 1, n, COLUMNAS.length + COLUMNAS_REVISION.length).getValues() : [];
+  var buscado = rutLimpio(rut);
+  for (var i = 0; i < filas.length; i++) {
+    var f = filas[i];
+    if (String(f[0]).toUpperCase() !== folio || rutLimpio(f[4]) !== buscado) continue;
+    var admisible = texto(f[COLUMNAS.length], 5).toLowerCase().replace('í', 'i');
+    var resultado = texto(f[COLUMNAS.length + 3], 40);
+    if (resultado) return { ok: true, folio: folio, estado: resultado, detalle: 'Resultado del proceso ' + ANIO_PROCESO + '. Revise también su correo electrónico.' };
+    if (admisible === 'si') return { ok: true, folio: folio, estado: 'Admisible, en evaluación', detalle: 'Sus antecedentes cumplen los requisitos y la postulación está en etapa de puntaje.' };
+    if (admisible === 'no') return { ok: true, folio: folio, estado: 'No admisible', detalle: 'El Departamento Social le informará las razones por correo electrónico.' };
+    return { ok: true, folio: folio, estado: 'Recibida, en revisión', detalle: 'La revisión de antecedentes se realiza durante abril.' };
+  }
+  return { ok: false, error: 'No encontramos una postulación con ese folio y ese RUT.' };
+}
+
+/** Guarda una consulta que el asistente del sitio no supo responder. No guarda quién la hizo. */
+function registrarConsulta(consulta) {
+  if (!REGISTRAR_CONSULTAS) return { ok: false, error: 'El registro de consultas no está activo.' };
+  var t = texto(consulta, 200);
+  if (t.length < 3) return { ok: false, error: 'Consulta vacía.' };
+  var libro = SpreadsheetApp.openById(HOJA_ID);
+  var h = libro.getSheetByName(HOJA_CONSULTAS) || libro.insertSheet(HOJA_CONSULTAS);
+  if (h.getLastRow() === 0) h.appendRow(['Fecha', 'Consulta sin respuesta']);
+  h.appendRow([new Date(), celda(t)]);
+  return { ok: true };
 }
 
 function rechazar(mensaje) { return responder({ ok: false, error: mensaje }); }

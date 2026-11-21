@@ -22,7 +22,8 @@ Para activar la recepción siga la guía [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md
 | `assets/` | Logos oficiales de la Municipalidad de Rengo |
 | `backend/Code.gs` | Servicio de recepción en Google Apps Script |
 | `tools/build.py` | Genera en `dist/` una versión del sitio en un solo archivo |
-| `documentos/` | Ordenanza de la beca en PDF, para descarga desde el sitio |
+| `documentos/` | Ordenanza de la beca en PDF y formatos imprimibles (`documentos/formatos/`, generados con `node tools/formatos.js`) |
+| `datos/` | `resultados.json`, que alimenta la sección de resultados del sitio |
 | `tests/` | Pruebas automáticas |
 | `docs/` | Guías de despliegue, publicación en GitHub y protección de datos |
 | `.github/workflows/pages.yml` | Publicación automática en GitHub Pages |
@@ -65,6 +66,7 @@ node tests/rut.test.js
 node tests/backend.test.js
 node tests/puntaje.test.js
 node tests/asistente.test.js
+node tests/gestion.test.js
 node tests/formulario.e2e.js
 ```
 
@@ -108,3 +110,17 @@ La sección de puntaje del sitio incluye un simulador para el postulante. La mis
 ## Asistente de consultas
 
 El sitio incluye una ventana de consultas sobre la ordenanza (`js/asistente.js`). No usa inteligencia artificial generativa ni servicios externos. Busca la respuesta más cercana entre las 39 de `js/ordenanza.js`, cada una con su artículo de origen, y cuando no encuentra una lo dice y deriva al correo de la beca. Las preguntas no se guardan ni se envían. Para corregir o agregar respuestas edite `js/ordenanza.js` y ejecute `node tests/asistente.test.js`.
+
+## Complementos del sitio
+
+`js/complementos.js` reúne cinco ayudas que funcionan sin servidor, salvo la consulta de estado.
+
+| Complemento | Qué hace | Ajuste |
+| --- | --- | --- |
+| Aviso de plazo | Muestra los días que faltan para la apertura o el cierre del 1 al 30 de marzo | `PLAZO_ANIO` y `PLAZO_CERRAR_FORMULARIO` en `js/complementos.js` |
+| Lista de verificación | El postulante confirma que reunió requisitos y documentos antes del formulario | Marcado en `index.html`, bloque `#verifica` |
+| Accesibilidad | Tamaño de letra y alto contraste, recordados en el navegador | Barra superior |
+| Estado por folio | Consulta la etapa de una postulación con folio y RUT. Requiere `ENDPOINT` | Lee las columnas «Admisible» y «Resultado» de la hoja |
+| Resultados | Muestra cifras y nómina cuando `datos/resultados.json` tiene `"publicado": true` | El panel interno genera ese archivo |
+
+El asistente puede registrar las consultas que no supo responder. Viene desactivado. Para activarlo cambie `REGISTRAR_CONSULTAS` a `true` en `js/asistente.js` y en `backend/Code.gs`. Se guarda solo el texto y la fecha, y el asistente avisa al usuario.

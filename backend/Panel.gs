@@ -3,8 +3,8 @@
  *
  * Qué hace
  *   Trabaja sobre la misma hoja de cálculo donde Code.gs registra las postulaciones.
- *   1. prepararRevision() agrega tres columnas para el equipo de DIDECO:
- *      «Admisible» (Sí o No), «Motivo de inadmisibilidad» y «Residencia rural» (Sí o No).
+ *   1. prepararRevision() agrega cuatro columnas para el equipo de DIDECO:
+ *      «Admisible» (Sí o No), «Motivo de inadmisibilidad», «Residencia rural» (Sí o No) y «Resultado».
  *   2. generarNomina() calcula el puntaje de cada postulación admisible con la regla de
  *      Puntaje.gs (artículo 16), ordena de mayor a menor, aplica el desempate del artículo 17
  *      y escribe tres pestañas: «Nómina», «Inadmisibles» y «Pendientes».
@@ -12,7 +12,7 @@
  * Lo que NO hace
  *   No decide la admisibilidad: esa revisión la hacen los profesionales (artículo 12) y la comisión.
  *   No realiza sorteos: cuando el empate es total lo indica para que la comisión lo resuelva.
- *   No envía correos ni modifica las postulaciones.
+ *   No envía correos por sí solo: prepara borradores y envía únicamente los que el equipo marque.
  *
  * Cómo se usa
  *   Requiere Code.gs y Puntaje.gs en el mismo proyecto de Apps Script.
@@ -26,7 +26,11 @@
 const CUPOS = 0;
 const MONTO_BECA = 400000;
 
-const COLUMNAS_REVISION = ['Admisible', 'Motivo de inadmisibilidad', 'Residencia rural'];
+// COLUMNAS_REVISION está definida en Code.gs.
+// Con false, la publicación de resultados lleva folio y puntaje, sin nombres.
+const PUBLICAR_NOMBRES = false;
+const HOJA_CORREOS = 'Correos';
+const HOJA_PUBLICACION = 'Publicación';
 const HOJA_NOMINA = 'Nómina';
 const HOJA_INADMISIBLES = 'Inadmisibles';
 const HOJA_PENDIENTES = 'Pendientes';
@@ -36,6 +40,10 @@ function onOpen() {
     SpreadsheetApp.getUi().createMenu('Beca Municipal')
       .addItem('1. Preparar columnas de revisión', 'prepararRevision')
       .addItem('2. Generar nómina con puntajes', 'generarNomina')
+      .addItem('3. Registrar resultados en la hoja', 'registrarResultados')
+      .addItem('4. Preparar correos de resultado', 'prepararCorreos')
+      .addItem('5. Enviar correos marcados', 'enviarCorreos')
+      .addItem('6. Preparar publicación de resultados', 'prepararPublicacion')
       .addToUi();
   } catch (x) { /* proyecto independiente: no hay menú */ }
 }
@@ -49,6 +57,8 @@ function prepararRevision() {
   const siNo = SpreadsheetApp.newDataValidation().requireValueInList(['Sí', 'No'], true).setAllowInvalid(false).build();
   hoja.getRange(2, inicio, filas, 1).setDataValidation(siNo);
   hoja.getRange(2, inicio + 2, filas, 1).setDataValidation(siNo);
+  const resultados = SpreadsheetApp.newDataValidation().requireValueInList(['Seleccionado', 'Lista de espera', 'No seleccionado'], true).setAllowInvalid(false).build();
+  hoja.getRange(2, inicio + 3, filas, 1).setDataValidation(resultados);
   hoja.setFrozenRows(1);
 }
 
@@ -147,4 +157,118 @@ function armarNomina(filas, cupos) {
     i = j + 1;
   }
   return { nomina: nomina, inadmisibles: inadmisibles, pendientes: pendientes, sorteos: sorteos };
+}
+
+/* ───────── resultados, correos y publicación ───────── */
+
+function leerNomina() {
+  const hoja = SpreadsheetApp.openById(HOJA_ID).getSheets()[0];
+  const n = hoja.getLastRow() - 1;
+  const filas = n > 0 ? hoja.getRange(2, 1, n, COLUMNAS.length + COLUMNAS_REVISION.length).getValues() : [];
+  return { hoja: hoja, filas: filas, r: armarNomina(filas, CUPOS) };
+}
+
+/**
+ * Copia el estado final de cada postulación a la columna «Resultado» de la hoja principal.
+ * Esa columna es la que lee la consulta de estado del sitio. No actúa si falta definir cupos o hay sorteos pendientes.
+ */
+function registrarResultados() {
+  const x = leerNomina();
+  if (!(CUPOS > 0)) throw new Error('Defina CUPOS antes de registrar resultados.');
+  if (x.r.sorteos > 0) throw new Error('Hay empates que requieren sorteo. Resuélvalos antes de registrar resultados.');
+  const estados = {};
+  x.r.nomina.forEach(function (p) { estados[p.folio] = p.estado; });
+  const col = COLUMNAS.length + COLUMNAS_REVISION.indexOf('Resultado') + 1;
+  x.filas.forEach(function (f, i) {
+    const e = estados[String(f[0]).trim()];
+    if (e) x.hoja.getRange(i + 2, col).setValue(e);
+  });
+  return Object.keys(estados).length;
+}
+
+/**
+ * Redacta los correos de resultado. Lógica pura (se prueba en tests/gestion.test.js).
+ * Solo incluye estados definitivos: seleccionados, lista de espera e inadmisibles.
+ */
+function armarCorreos(r, anio, correoBeca) {
+  var firma = '\n\nDirección de Desarrollo Comunitario\nIlustre Municipalidad de Rengo';
+  var filas = [];
+  r.nomina.forEach(function (p) {
+    if (p.estado === 'Seleccionado') {
+      filas.push([p.folio, p.correo, 'Beca Municipal Rengo ' + anio + '. Resultado de su postulación, folio ' + p.folio,
+        'Estimado(a) ' + p.nombre + ':\n\nLe informamos que su postulación a la Beca Municipal Rengo ' + anio + ' fue seleccionada, con un puntaje de ' +
+        String(p.total).replace('.', ',') + ' puntos.\n\nEl aporte de $400.000 se paga en una cuota durante el mes de mayo, por transferencia a la cuenta que usted indicó. ' +
+        'Recuerde que debe rendir los gastos en la Oficina de Partes de la municipalidad a más tardar el 30 de noviembre, con la planilla de rendición y los comprobantes originales.\n\n' +
+        'Para consultas escriba a ' + correoBeca + ' indicando su folio.' + firma]);
+    } else if (p.estado === 'Lista de espera') {
+      filas.push([p.folio, p.correo, 'Beca Municipal Rengo ' + anio + '. Resultado de su postulación, folio ' + p.folio,
+        'Estimado(a) ' + p.nombre + ':\n\nSu postulación a la Beca Municipal Rengo ' + anio + ' fue declarada admisible y obtuvo ' + String(p.total).replace('.', ',') +
+        ' puntos. Las becas se asignan de mayor a menor puntaje según los recursos disponibles, y en esta oportunidad su puntaje no alcanzó uno de los cupos del año.\n\n' +
+        'Para consultas escriba a ' + correoBeca + ' indicando su folio.' + firma]);
+    }
+  });
+  r.inadmisibles.forEach(function (p) {
+    filas.push([p.folio, p.correo, 'Beca Municipal Rengo ' + anio + '. Resultado de su postulación, folio ' + p.folio,
+      'Estimado(a) ' + p.nombre + ':\n\nSu postulación a la Beca Municipal Rengo ' + anio + ' no fue admitida por la siguiente razón: ' + p.motivo +
+      '.\n\nPara consultas escriba a ' + correoBeca + ' indicando su folio.' + firma]);
+  });
+  return filas;
+}
+
+/** Escribe los borradores en la pestaña «Correos» para que el equipo los revise. No envía nada. */
+function prepararCorreos() {
+  const x = leerNomina();
+  if (!(CUPOS > 0)) throw new Error('Defina CUPOS antes de preparar los correos.');
+  if (x.r.sorteos > 0) throw new Error('Hay empates que requieren sorteo. Resuélvalos antes de preparar los correos.');
+  const filas = armarCorreos(x.r, ANIO_PROCESO, CORREO_BECA).map(function (f) { return f.concat(['No', '']); });
+  escribirPestana(SpreadsheetApp.openById(HOJA_ID), HOJA_CORREOS,
+    ['Borradores de correos de resultado. Revise cada texto, cambie «Enviar» a Sí en los que correspondan y luego use «Enviar correos marcados».'],
+    ['Folio', 'Destinatario', 'Asunto', 'Mensaje', 'Enviar', 'Enviado'], filas);
+  return filas.length;
+}
+
+/** Envía solo las filas con «Enviar» en Sí y sin fecha en «Enviado». Anota la fecha para no repetir envíos. */
+function enviarCorreos() {
+  const h = SpreadsheetApp.openById(HOJA_ID).getSheetByName(HOJA_CORREOS);
+  if (!h || h.getLastRow() < 4) throw new Error('Primero prepare los correos.');
+  const filas = h.getRange(4, 1, h.getLastRow() - 3, 6).getValues();
+  var enviados = 0;
+  filas.forEach(function (f, i) {
+    if (String(f[4]).trim().toLowerCase().replace('í', 'i') !== 'si' || f[5]) return;
+    MailApp.sendEmail({ to: String(f[1]), replyTo: CORREO_BECA, subject: String(f[2]), body: String(f[3]) });
+    h.getRange(i + 4, 6).setValue(new Date());
+    enviados++;
+  });
+  return enviados;
+}
+
+/** Datos para la sección de resultados del sitio. Lógica pura. Sin RUT, correo ni datos del hogar. */
+function armarPublicacion(r, total, anio, fecha, conNombres) {
+  var seleccionados = r.nomina.filter(function (p) { return p.estado === 'Seleccionado'; });
+  var tramos = {};
+  seleccionados.forEach(function (p) { tramos[p.tramo] = (tramos[p.tramo] || 0) + 1; });
+  return {
+    anio: anio, publicado: true, fecha: fecha,
+    cifras: { postulaciones: total, admisibles: r.nomina.length, seleccionados: seleccionados.length, montoTotal: seleccionados.length * MONTO_BECA },
+    porTramo: Object.keys(tramos).sort(function (a, b) { return parseInt(a, 10) - parseInt(b, 10); }).map(function (t) { return { tramo: t, seleccionados: tramos[t] }; }),
+    nomina: seleccionados.map(function (p) {
+      var fila = { folio: p.folio, puntaje: p.total };
+      if (conNombres) fila.nombre = p.nombre;
+      return fila;
+    })
+  };
+}
+
+/** Deja en la pestaña «Publicación» el texto que Informática debe guardar como datos/resultados.json en el sitio. */
+function prepararPublicacion() {
+  const x = leerNomina();
+  if (!(CUPOS > 0)) throw new Error('Defina CUPOS antes de preparar la publicación.');
+  if (x.r.sorteos > 0) throw new Error('Hay empates que requieren sorteo. Resuélvalos antes de publicar.');
+  const total = x.r.nomina.length + x.r.inadmisibles.length + x.r.pendientes.length;
+  const datos = armarPublicacion(x.r, total, ANIO_PROCESO, Utilities.formatDate(new Date(), ZONA_HORARIA, 'yyyy-MM-dd'), PUBLICAR_NOMBRES);
+  var h = SpreadsheetApp.openById(HOJA_ID).getSheetByName(HOJA_PUBLICACION) || SpreadsheetApp.openById(HOJA_ID).insertSheet(HOJA_PUBLICACION);
+  h.clearContents();
+  h.getRange(1, 1).setValue('Copie el contenido de la celda A3 en el archivo datos/resultados.json del sitio.');
+  h.getRange(3, 1).setValue(JSON.stringify(datos, null, 1));
+  return datos;
 }

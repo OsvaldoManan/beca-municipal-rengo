@@ -9,6 +9,13 @@
     if (texto) e.textContent = texto;
     return e;
   };
+  // Con true, las consultas sin respuesta se envían al servicio para mejorar la base (solo el texto, sin identificar a la persona).
+  // Requiere REGISTRAR_CONSULTAS en backend/Code.gs y cambia el aviso inicial del asistente.
+  var REGISTRAR_CONSULTAS = false;
+  function registrar(texto) {
+    if (!REGISTRAR_CONSULTAS || typeof ENDPOINT === "undefined" || !ENDPOINT || typeof fetch !== "function") return;
+    try { fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ tipo: "consulta", texto: String(texto).slice(0, 200) }) }).catch(function () {}); } catch (x) {}
+  }
   var SUGERIDAS = ["fechas", "documentos", "monto", "puntaje", "gastos", "rendicion"];
 
   var boton = crear("button", "asis-boton", "Consultas sobre la ordenanza");
@@ -68,14 +75,14 @@
     if (!texto) return;
     decir(texto, "asis-yo");
     if (entradaDirecta) responder(entradaDirecta, []);
-    else { var r = asistenteBuscar(texto); responder(r.entrada, r.relacionadas); }
+    else { var r = asistenteBuscar(texto); if (!r.entrada) registrar(texto); responder(r.entrada, r.relacionadas); }
     bajar();
   }
 
   function abrir() {
     panel.hidden = false; boton.setAttribute("aria-expanded", "true"); boton.hidden = true;
     if (!registro.childNodes.length) {
-      decir("Puedo responder consultas sobre requisitos, fechas, documentos, puntaje, uso de la beca y rendición, siempre según la ordenanza. No reemplazo la orientación de DIDECO ni resuelvo casos particulares.", "asis-bot");
+      decir("Puedo responder consultas sobre requisitos, fechas, documentos, puntaje, uso de la beca y rendición, siempre según la ordenanza. No reemplazo la orientación de DIDECO ni resuelvo casos particulares." + (REGISTRAR_CONSULTAS ? " Las consultas que no pueda responder se registran, sin identificarle, para mejorar este servicio. No escriba datos personales." : ""), "asis-bot");
       registro.append(sugerencias(SUGERIDAS.map(porId)));
     }
     campo.focus();

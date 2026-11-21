@@ -75,8 +75,9 @@ grupo("orden y desempate del artículo 17", () => {
 
 // Nómina: se carga Panel.gs junto a las constantes de Code.gs que necesita.
 const columnas = /const COLUMNAS = \[[\s\S]*?\];/.exec(leer("backend/Code.gs"))[0];
+const revision = /const COLUMNAS_REVISION = \[[\s\S]*?\];/.exec(leer("backend/Code.gs"))[0];
 const panel = vm.createContext({});
-vm.runInContext(columnas + "\nconst HOJA_ID='x', ZONA_HORARIA='America/Santiago', ANIO_PROCESO=2027;\n" + leer("backend/Puntaje.gs") + "\n" + leer("backend/Panel.gs") +
+vm.runInContext(columnas + "\n" + revision + "\nconst MONTO_X=0, HOJA_ID='x', ZONA_HORARIA='America/Santiago', ANIO_PROCESO=2027;\n" + leer("backend/Puntaje.gs") + "\n" + leer("backend/Panel.gs") +
   "\nthis.armarNomina = armarNomina; this.COLUMNAS = COLUMNAS; this.COLUMNAS_REVISION = COLUMNAS_REVISION;", panel);
 const C = [...panel.COLUMNAS, ...panel.COLUMNAS_REVISION];
 const fila = d => C.map(c => d[c] === undefined ? "" : d[c]);

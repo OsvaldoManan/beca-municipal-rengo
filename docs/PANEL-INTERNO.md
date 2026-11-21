@@ -14,10 +14,23 @@ El menú «Beca Municipal» aparece en la hoja solo si el proyecto fue creado de
 
 | Paso | Quién | Qué hace |
 | --- | --- | --- |
-| 1. Preparar columnas de revisión (`prepararRevision`) | Profesional a cargo | Agrega las columnas «Admisible», «Motivo de inadmisibilidad» y «Residencia rural» al final de la hoja |
+| 1. Preparar columnas de revisión (`prepararRevision`) | Profesional a cargo | Agrega las columnas «Admisible», «Motivo de inadmisibilidad», «Residencia rural» y «Resultado» al final de la hoja |
 | 2. Revisar cada postulación | Profesionales de DIDECO (artículo 12) | Abre la carpeta, verifica los documentos y marca «Admisible» con Sí o No. Si es No, escribe el motivo. Marca «Residencia rural» cuando corresponda |
 | 3. Corregir datos no acreditados | Profesionales de DIDECO | El puntaje usa lo declarado en el formulario. Si una credencial, el tramo o el promedio no coinciden con los documentos, se corrige la celda |
 | 4. Generar nómina (`generarNomina`) | Profesional a cargo | Escribe las pestañas «Nómina», «Inadmisibles» y «Pendientes». Se puede repetir las veces que sea necesario |
+
+## Cierre del proceso
+
+Estas funciones exigen que `CUPOS` esté definido y que no queden empates por sortear.
+
+| Función | Qué hace |
+| --- | --- |
+| Registrar resultados (`registrarResultados`) | Copia «Seleccionado» o «Lista de espera» a la columna «Resultado» de la hoja principal. Esa columna es la que lee la consulta de estado del sitio |
+| Preparar correos (`prepararCorreos`) | Escribe en la pestaña «Correos» un borrador para cada seleccionado, cada postulante en lista de espera y cada inadmisible, con su motivo (artículo 14 letra c). No envía nada |
+| Enviar correos marcados (`enviarCorreos`) | Envía solo las filas donde «Enviar» dice Sí y anota la fecha, de modo que repetir la función no duplica envíos |
+| Preparar publicación (`prepararPublicacion`) | Deja en la pestaña «Publicación» el texto que Informática guarda como `datos/resultados.json` en el sitio |
+
+La publicación incluye cifras agregadas y la nómina de seleccionados con folio y puntaje. No incluye nombres salvo que se cambie `PUBLICAR_NOMBRES` a `true`. Esa decisión corresponde al municipio, considerando que la ordenanza ordena publicar el listado de beneficiarios (artículo 9) y que se trata de un beneficio social.
 
 ## Lectura de la pestaña «Nómina»
 
