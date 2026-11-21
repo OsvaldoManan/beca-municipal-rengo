@@ -55,6 +55,20 @@ function hoyEnChile() {
     if (!obra.hidden) reloj = setInterval(tic, 1000);
   }
 
+  /* ── Menú principal en pantallas angostas ── */
+  var menuBoton = $("menuBoton"), menuLista = $("menuLista");
+  if (menuBoton && menuLista) {
+    var angosto = window.matchMedia("(max-width:1080px)");
+    var cerrarMenu = function () { menuLista.hidden = angosto.matches; menuBoton.setAttribute("aria-expanded", "false"); };
+    menuBoton.addEventListener("click", function () {
+      menuLista.hidden = !menuLista.hidden;
+      menuBoton.setAttribute("aria-expanded", menuLista.hidden ? "false" : "true");
+    });
+    menuLista.addEventListener("click", function (ev) { if (ev.target.closest("a")) cerrarMenu(); });
+    if (angosto.addEventListener) angosto.addEventListener("change", cerrarMenu);
+    cerrarMenu();
+  }
+
   /* ── Aviso de plazo ── */
   var avisos = document.querySelectorAll("[data-plazo]");
   if (avisos.length) {

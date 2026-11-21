@@ -69,6 +69,7 @@ node tests/puntaje.test.js
 node tests/asistente.test.js
 node tests/gestion.test.js
 node tests/formulario.e2e.js
+node tests/pasos.e2e.js
 ```
 
 La primera verifica la validación del RUT. La segunda ejecuta el servicio de recepción contra servicios de Google simulados. La de puntaje verifica la regla del artículo 16 y el armado de la nómina. La última recorre el formulario de principio a fin en un navegador y requiere Playwright con Chromium instalado.
@@ -125,3 +126,7 @@ El sitio incluye una ventana de consultas sobre la ordenanza (`js/asistente.js`)
 | Resultados | Muestra cifras y nómina cuando `datos/resultados.json` tiene `"publicado": true` | El panel interno genera ese archivo |
 
 El asistente puede registrar las consultas que no supo responder. Viene desactivado. Para activarlo cambie `REGISTRAR_CONSULTAS` a `true` en `js/asistente.js` y en `backend/Code.gs`. Se guarda solo el texto y la fecha, y el asistente avisa al usuario.
+
+## Estructura del portal
+
+El portal tiene un menú superior fijo, una franja de accesos rápidos bajo la cabecera y secciones en franjas alternadas. El formulario se presenta paso a paso (`js/pasos.js`), con una barra de avance y la opción de ver todos los pasos en una sola página. La validación y el envío siguen en `js/app.js`.

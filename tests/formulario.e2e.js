@@ -44,6 +44,9 @@ async function abrir(browser, { endpoint, respuesta, ancho } = {}) {
   page.on("request", r => { if (/^https?:/.test(r.url()) && r.url() !== endpoint && !/fonts\.(googleapis|gstatic)\.com/.test(r.url())) envios.push(r); });
   await page.goto(PAGINA);
   await page.waitForSelector("#doc_cedula", { state: "attached" });
+  // El formulario abre paso a paso. Estas pruebas recorren todos los campos, por eso usan la vista completa
+  // que el sitio ofrece al postulante. El recorrido por pasos tiene su propia prueba en tests/pasos.e2e.js.
+  if (await page.$("#pasosModo")) await page.click("#pasosModo");
   return { ctx, page, errores, envios };
 }
 

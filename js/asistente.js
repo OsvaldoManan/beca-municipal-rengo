@@ -91,6 +91,10 @@
   function cerrarPanel() { panel.hidden = true; boton.hidden = false; boton.setAttribute("aria-expanded", "false"); }
 
   boton.addEventListener("click", abrir);
+  // Cualquier enlace con el atributo data-asistente abre esta ventana.
+  [].forEach.call(document.querySelectorAll("[data-asistente]"), function (e) {
+    e.addEventListener("click", function (ev) { ev.preventDefault(); abrir(); });
+  });
   cerrar.addEventListener("click", function () { cerrarPanel(); boton.focus(); });
   panel.addEventListener("keydown", function (ev) { if (ev.key === "Escape") { cerrarPanel(); boton.focus(); } });
   formulario.addEventListener("submit", function (ev) { ev.preventDefault(); preguntar(campo.value); campo.value = ""; campo.focus(); });
