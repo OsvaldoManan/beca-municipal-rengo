@@ -29,6 +29,47 @@ function estadoPlazo(hoy, anio) {
   if (h <= cierra) return { fase: "abierto", dias: cierra - h };
   return { fase: "cerrado", dias: h - cierra };
 }
+/** Días del 1 al 30 de marzo con su cantidad de postulaciones. porDia = {"2027-03-05": 4, ...}. */
+function serieMarzo(porDia, anio) {
+  var dias = [];
+  for (var d = 1; d <= 30; d++) {
+    var k = anio + "-03-" + (d < 10 ? "0" + d : d);
+    dias.push({ dia: d, n: (porDia && porDia[k]) || 0 });
+  }
+  return dias;
+}
+
+/** Dibuja las cifras públicas: total, barras por tramo, columnas por día y la tabla equivalente. */
+function pintarCifras(j) {
+  var $ = function (id) { return document.getElementById(id); };
+  var mil = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "."); };
+  $("cifCuerpo").hidden = false;
+  $("cifTotal").textContent = mil(j.total);
+  // Barras por tramo: una sola serie, un solo color, con el valor escrito junto a cada barra.
+  var tramos = $("cifTramos"); tramos.textContent = "";
+  var claves = Object.keys(j.porTramo || {});
+  var maxT = Math.max.apply(null, claves.map(function (k) { return j.porTramo[k]; }).concat([1]));
+  claves.forEach(function (k) {
+    var n = j.porTramo[k], li = document.createElement("li");
+    var rot = document.createElement("span"); rot.className = "cif-rot"; rot.textContent = "Tramo " + k;
+    var pista = document.createElement("span"); pista.className = "cif-pista";
+    var barra = document.createElement("span"); barra.className = "cif-barra"; barra.style.width = (n / maxT * 100) + "%";
+    pista.append(barra);
+    var val = document.createElement("span"); val.className = "cif-val"; val.textContent = mil(n);
+    li.append(rot, pista, val); tramos.append(li);
+  });
+  // Columnas por día de marzo y su tabla equivalente.
+  var serie = serieMarzo(j.porDia, j.proceso), maxD = Math.max.apply(null, serie.map(function (x) { return x.n; }).concat([1]));
+  var cols = $("cifDias"), tabla = $("cifTabla"); cols.textContent = ""; tabla.textContent = "";
+  serie.forEach(function (x) {
+    var c = document.createElement("span"); c.className = "cif-col" + (x.n ? "" : " vacia");
+    c.style.height = (x.n ? Math.max(4, x.n / maxD * 100) : 0) + "%";
+    c.dataset.tip = x.dia + " de marzo: " + x.n; cols.append(c);
+    var tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td");
+    a.textContent = x.dia + " de marzo"; b.textContent = mil(x.n); tr.append(a, b); tabla.append(tr);
+  });
+}
+
 function hoyEnChile() {
   try {
     var p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()).split("-");
@@ -81,6 +122,47 @@ function hoyEnChile() {
     avisos.forEach(function (a) { a.textContent = texto; a.hidden = false; a.dataset.fase = e.fase; });
     var zona = document.querySelector(".zona");
     if (cerrado && zona) zona.hidden = true;
+
+    /* Aviso por correo para la apertura: solo antes del 1 de marzo y con la recepción conectada */
+    var avisoForm = $("avisoForm");
+    var conServicio = typeof ENDPOINT !== "undefined" && !!ENDPOINT;
+    if (avisoForm && e.fase === "antes" && conServicio) {
+      avisoForm.hidden = false;
+      var avisoSalida = $("avisoResultado"), avisoBoton = avisoForm.querySelector("button");
+      var decirAviso = function (tipo, msj) { avisoSalida.className = "aviso " + tipo; avisoSalida.textContent = msj; avisoSalida.hidden = false; };
+      avisoForm.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var correo = $("avisoCorreo").value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) { decirAviso("error", "Revise el correo electrónico. Debe tener la forma nombre@correo.cl."); $("avisoCorreo").focus(); return; }
+        avisoBoton.disabled = true; decirAviso("info", "Registrando su correo…");
+        fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ tipo: "recordatorio", correo: correo }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (j && j.ok) { decirAviso("exito", j.repetido ? "Ese correo ya estaba registrado. Le escribiremos el 1 de marzo." : "Listo. Le escribiremos a " + correo + " el 1 de marzo."); avisoForm.reset(); }
+            else decirAviso("error", (j && j.error) || "No fue posible registrar su correo. Intente nuevamente.");
+          })
+          .catch(function () { decirAviso("error", "No fue posible conectarse. Revise su conexión e intente nuevamente."); })
+          .then(function () { avisoBoton.disabled = false; });
+      });
+    }
+    document.querySelectorAll(".obra-enlace").forEach(function (a) { a.hidden = !(e.fase === "antes" && conServicio); });
+
+    /* Cifras públicas del proceso: totales sin datos personales, leídos del servicio */
+    var cifras = $("cifras");
+    if (cifras && conServicio) {
+      cifras.hidden = false;
+      var nota = $("cifNota");
+      if (e.fase === "antes") {
+        nota.textContent = "Las cifras se publican aquí desde el 1 de marzo, cuando abre la postulación.";
+      } else {
+        nota.textContent = "Cargando cifras…";
+        fetch(ENDPOINT + "?cifras=1").then(function (r) { return r.json(); }).then(function (j) {
+          if (!j || !j.ok) { nota.textContent = "Las cifras no están disponibles en este momento."; return; }
+          pintarCifras(j);
+          nota.textContent = "Actualizado el " + j.actualizado + ". Solo se muestran totales, sin datos de las personas.";
+        }).catch(function () { nota.textContent = "Las cifras no están disponibles en este momento."; });
+      }
+    }
   }
 
   /* ── Lista de verificación previa ── */

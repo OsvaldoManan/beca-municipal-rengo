@@ -79,3 +79,18 @@ Si se cambia la regla, edite `js/puntaje.js`, cópielo sobre `backend/Puntaje.gs
 ## Límites
 
 El panel se probó con servicios de Google simulados. La lectura y escritura real en la hoja debe verificarse con postulaciones ficticias antes de abril.
+
+## Aviso de apertura por correo
+
+Antes del 1 de marzo, el sitio ofrece a las personas dejar su correo para recibir un aviso cuando abra la postulación. Los correos quedan en la pestaña «Recordatorios» de la hoja, con la fecha de la solicitud.
+
+El 1 de marzo, abra el proyecto en Apps Script, elija la función `enviarRecordatorios` en el selector y pulse **Ejecutar**. El resultado indica cuántos avisos se enviaron y cuántos quedaron pendientes.
+
+- La función solo envía dentro del período de postulación. Antes del 1 de marzo no envía nada.
+- Cada aviso enviado queda marcado con su fecha en la columna «Aviso enviado», de modo que nadie lo recibe dos veces.
+- La cuota diaria de correo de la cuenta es limitada. La función deja sin usar 20 envíos (`RESERVA_CORREOS`) para los comprobantes de postulación. Si quedan pendientes, ejecútela de nuevo al día siguiente.
+- Para desactivar el aviso, cambie `RECORDATORIOS_ACTIVOS` a `false` en `Code.gs` y publique una versión nueva.
+
+## Cifras públicas
+
+Durante el período de postulación, la sección «Estado y resultados» del sitio muestra el total de postulaciones recibidas, la cantidad por tramo del Registro Social de Hogares y la cantidad por día. El servicio entrega solo esos totales. No entrega nombres, RUT, correos ni ningún otro dato que identifique a una persona. Para dejar de publicarlas, cambie `PUBLICAR_CIFRAS` a `false` en `Code.gs` y publique una versión nueva.

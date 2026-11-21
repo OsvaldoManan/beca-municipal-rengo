@@ -16,6 +16,10 @@ Nota práctica para quienes administran el sitio y la recepción de postulacione
 
 Parte de esta información es sensible y parte corresponde a menores de edad y a terceros que no llenan el formulario. Por eso requiere un cuidado mayor que el de un trámite común.
 
+El aviso de apertura guarda aparte, en la pestaña «Recordatorios», solo el correo de quien lo pide y la fecha. Se usa únicamente para avisar que abrió la postulación. Conviene borrar esa pestaña al cerrar el proceso.
+
+Las cifras públicas del sitio son totales agregados, sin datos que identifiquen a una persona.
+
 ## Dónde quedan los datos
 
 | Lugar | Qué contiene |

@@ -495,3 +495,47 @@ main>section>.enc h2:focus{outline:none}
    la justificación deja espacios irregulares entre palabras, así que se alinea a la izquierda. */
 .razon p{text-align:left}
 @media(max-width:640px){.prosa p,details p{text-align:left}}
+
+/* Aviso por correo para la apertura de la postulación */
+.aviso-apertura{display:grid;gap:var(--e3);max-width:var(--medida);background:var(--azul-pastel);border-top:3px solid var(--azul);padding:var(--e5)}
+.aviso-apertura[hidden]{display:none}
+.aviso-apertura h3{margin:0;font:600 var(--t-l)/1.25 var(--serif);color:var(--tinta)}
+.aviso-apertura>p{margin:0;font-size:var(--t-s);line-height:1.5;color:var(--tinta)}
+.aviso-fila{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--e3);align-items:end}
+.aviso-fila .btn{min-height:2.75rem}
+@media(max-width:560px){.aviso-fila{grid-template-columns:minmax(0,1fr)}.aviso-fila .btn{justify-self:start}}
+.obra-enlace{color:#fff;font-weight:600;text-underline-offset:.18em;white-space:nowrap}
+.obra-enlace[hidden]{display:none}
+.obra-enlace:hover{color:var(--azul-medio)}
+
+/* Orientación «¿Dónde lo obtengo?» bajo cada documento del paso 5 */
+.doc .donde{grid-column:2/-1;font-size:var(--t-s);line-height:1.5}
+.doc .donde summary{cursor:pointer;color:var(--azul);font-weight:600;width:max-content;max-width:100%;padding:.2rem 0}
+.doc .donde p{margin:.3rem 0 0;color:var(--tinta);text-align:left;font:400 var(--t-s)/1.5 var(--sans)}
+.doc .donde a{font-weight:600;white-space:nowrap}
+.obra :focus-visible{outline-color:#fff}
+
+/* Cifras públicas del proceso. Una sola serie: un solo color, valores escritos y tabla equivalente. */
+.cifras-proceso{display:grid;gap:var(--e4);max-width:var(--medida);border-top:1px solid var(--borde);padding-top:var(--e5)}
+.cifras-proceso[hidden],.cifras-cuerpo[hidden]{display:none}
+.cifras-proceso h3{margin:0;font:600 var(--t-l)/1.25 var(--serif)}
+.cifras-nota{margin:0;font-size:var(--t-s);color:var(--tinta-suave)}
+.cifras-cuerpo{display:grid;gap:var(--e5)}
+.cifra-total{display:grid;gap:.1rem}
+.cifra-total b{font:600 3rem/1 var(--serif);color:var(--tinta);font-variant-numeric:tabular-nums}
+.cifra-total span{font-size:var(--t-s);color:var(--tinta-suave)}
+.cif-fig{margin:0;display:grid;gap:var(--e3)}
+.cif-fig figcaption{font:600 var(--t-xs)/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-suave)}
+.cif-barras{list-style:none;margin:0;padding:0;display:grid;gap:.45rem}
+.cif-barras li{display:grid;grid-template-columns:6.5rem minmax(0,1fr) 2.5rem;gap:var(--e3);align-items:center;font-size:var(--t-s)}
+.cif-rot{color:var(--tinta)}
+.cif-pista{height:.9rem;display:block}
+.cif-barra{display:block;height:100%;min-width:2px;background:var(--azul);border-radius:0 4px 4px 0}
+.cif-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--tinta)}
+.cif-columnas{height:7rem;display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--borde)}
+.cif-col{display:block;background:var(--azul);border-radius:4px 4px 0 0;position:relative;min-height:0}
+.cif-col.vacia{background:transparent}
+.cif-col:hover{background:var(--marino)}
+.cif-col:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--marino);color:#fff;font:600 var(--t-xs)/1.2 var(--sans);padding:.3rem .5rem;border-radius:3px;z-index:2;pointer-events:none}
+.cif-columnas{padding-top:1.8rem}
+.cif-eje{display:flex;justify-content:space-between;font-size:var(--t-xs);color:var(--tinta-suave)}

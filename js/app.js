@@ -21,19 +21,33 @@ const BORRADOR_DIAS = 7;
 
 // Documentos del artículo 7 y del Anexo 1 de la ordenanza. Los que tienen "si" solo se piden
 // cuando el postulante marca la condición correspondiente.
+// "o" orienta sobre dónde obtener cada documento. Es una guía práctica, no un requisito de la ordenanza.
+// "l" es un enlace opcional [texto, dirección].
 const DOCS = [
-  {k:"cedula", n:"Cédula de identidad", d:"Ambos lados, vigente y legible."},
-  {k:"alumno_regular", n:"Certificado de alumno regular", d:"Emitido por su institución de educación superior."},
-  {k:"notas", n:"Certificado de notas", d:"Concentración de notas de enseñanza media si cursa primer año. Notas del último año aprobado en los demás casos."},
-  {k:"rsh", n:"Cartola del Registro Social de Hogares", d:"Actualizada en la comuna de Rengo."},
-  {k:"residencia", n:"Certificado de residencia", d:"De la junta de vecinos de su sector."},
-  {k:"declaracion", n:"Declaración jurada simple", d:"Formato del municipio, firmado."},
-  {k:"discapacidad", n:"Credencial de discapacidad", d:"Suya o del integrante de su familia.", si:()=>v("cDisc")||v("cDiscFam")},
-  {k:"cuidador", n:"Credencial de cuidador", d:"O certificado del Registro Nacional de Cuidadores.", si:()=>v("cCuid")},
-  {k:"fud", n:"Formulario Único de Derivación", d:"Emitido por la jefatura del programa Familias, Seguridades y Oportunidades.", si:()=>v("cFam")},
-  {k:"cedula_tutor", n:"Cédula del padre, madre o tutor", d:"Ambos lados.", si:()=>v("menor")},
-  {k:"autorizacion", n:"Autorización simple del tutor", d:"Respalda su postulación.", si:()=>v("menor")},
-  {k:"declaracion_tutor", n:"Declaración jurada para menores de edad", d:"Firmada por el tutor.", si:()=>v("menor")}
+  {k:"cedula", n:"Cédula de identidad", d:"Ambos lados, vigente y legible.",
+    o:"Fotografíe o escanee ambos lados en un mismo archivo. Si su cédula está vencida, renuévela en el Registro Civil.", l:["Registro Civil","https://www.registrocivil.cl"]},
+  {k:"alumno_regular", n:"Certificado de alumno regular", d:"Emitido por su institución de educación superior.",
+    o:"Normalmente se descarga en el portal de alumnos de su institución o se pide en la oficina de registro académico."},
+  {k:"notas", n:"Certificado de notas", d:"Concentración de notas de enseñanza media si cursa primer año. Notas del último año aprobado en los demás casos.",
+    o:"Si entra a primer año, el certificado de enseñanza media se descarga gratis en el sitio de certificados del Ministerio de Educación. Desde segundo año, lo entrega su institución de educación superior.", l:["Certificados del Ministerio de Educación","https://certificados.mineduc.cl"]},
+  {k:"rsh", n:"Cartola del Registro Social de Hogares", d:"Actualizada en la comuna de Rengo.",
+    o:"Se descarga con su ClaveÚnica en el sitio del Registro Social de Hogares. Si su hogar no figura en Rengo, actualícelo antes de postular.", l:["Registro Social de Hogares","https://www.registrosocial.gob.cl"]},
+  {k:"residencia", n:"Certificado de residencia", d:"De la junta de vecinos de su sector.",
+    o:"Solicítelo a la directiva de la junta de vecinos que corresponde a su domicilio. Pídalo con anticipación, porque puede tardar algunos días."},
+  {k:"declaracion", n:"Declaración jurada simple", d:"Formato del municipio, firmado.",
+    o:"Descargue el formato, imprímalo, complételo, fírmelo y luego escanéelo o fotografíelo.", l:["Descargar el formato (PDF)","documentos/formatos/declaracion-jurada-simple.pdf"]},
+  {k:"discapacidad", n:"Credencial de discapacidad", d:"Suya o del integrante de su familia.", si:()=>v("cDisc")||v("cDiscFam"),
+    o:"Es la credencial del Registro Nacional de Discapacidad, que administra el Registro Civil.", l:["Registro Civil","https://www.registrocivil.cl"]},
+  {k:"cuidador", n:"Credencial de cuidador", d:"O certificado del Registro Nacional de Cuidadores.", si:()=>v("cCuid"),
+    o:"Se tramita a través del Registro Social de Hogares.", l:["Registro Social de Hogares","https://www.registrosocial.gob.cl"]},
+  {k:"fud", n:"Formulario Único de Derivación", d:"Emitido por la jefatura del programa Familias, Seguridades y Oportunidades.", si:()=>v("cFam"),
+    o:"Lo emite la jefatura del programa Familias en la municipalidad. Puede pedirlo al equipo que acompaña a su hogar."},
+  {k:"cedula_tutor", n:"Cédula del padre, madre o tutor", d:"Ambos lados.", si:()=>v("menor"),
+    o:"Fotografíe o escanee ambos lados en un mismo archivo."},
+  {k:"autorizacion", n:"Autorización simple del tutor", d:"Respalda su postulación.", si:()=>v("menor"),
+    o:"Descargue el formato, pida a su tutor que lo complete y firme, y luego escanéelo o fotografíelo.", l:["Descargar el formato (PDF)","documentos/formatos/autorizacion-simple-tutor.pdf"]},
+  {k:"declaracion_tutor", n:"Declaración jurada para menores de edad", d:"Firmada por el tutor.", si:()=>v("menor"),
+    o:"Descargue el formato, pida a su tutor que lo complete y firme, y luego escanéelo o fotografíelo.", l:["Descargar el formato (PDF)","documentos/formatos/declaracion-jurada-menores-de-edad.pdf"]}
 ];
 
 /* ------------------------------------------------------------------------------------------
@@ -130,7 +144,18 @@ function pintarDocs(foco){
       if(rechazo){ delete archivos[doc.k]; pintarDocs(doc.k); marcar(doc.k,rechazo); return; }
       archivos[doc.k]=a; pintarDocs(doc.k);
     });
-    el.append(nom,lab,det); cont.append(el);
+    el.append(nom,lab,det);
+    if(doc.o){
+      const ay = document.createElement("details"); ay.className="donde";
+      const su = document.createElement("summary"); su.textContent="¿Dónde lo obtengo?";
+      const tx = document.createElement("p"); tx.textContent = doc.o;
+      if(doc.l){
+        const a = document.createElement("a"); a.href=doc.l[1]; a.textContent=doc.l[0]; a.target="_blank"; a.rel="noopener";
+        tx.append(" ", a);
+      }
+      ay.append(su,tx); el.append(ay);
+    }
+    cont.append(el);
     // Si la hoja de estilos oculta por completo el campo de archivo, el botón visible pasa a ser
     // el control de teclado (Enter o barra espaciadora).
     const cs = window.getComputedStyle ? getComputedStyle(inp) : null;

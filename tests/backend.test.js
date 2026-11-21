@@ -27,7 +27,8 @@ function entorno(opc = {}) {
     })
   };
   m.pestanas = {};
-  const pestana = datos => ({ getLastRow: () => datos.length, appendRow: f => datos.push(f.slice()) });
+  const pestana = datos => ({ getLastRow: () => datos.length, appendRow: f => datos.push(f.slice()),
+    getRange: (r, c, nr, nc) => ({ getValues: () => datos.slice(r - 1, r - 1 + nr).map(f => f.slice(c - 1, c - 1 + nc)), setValue: x => { datos[r - 1][c - 1] = x; } }) });
   const ctx = {
     console: { error: (...a) => m.logs.push(a.join(" ")), log() {} },
     LockService: { getScriptLock: () => ({ tryLock: () => { if (opc.ocupado) return false; m.candados++; return true; }, releaseLock: () => { m.liberados++; } }) },
@@ -38,7 +39,7 @@ function entorno(opc = {}) {
       const c = { nombre, archivos: [], papelera: false, getName: () => c.nombre, setName: n => { c.nombre = n; }, setTrashed: t => { c.papelera = t; },
         getUrl: () => "https://drive.example/" + m.carpetas.length, createFile: b => { c.archivos.push(b.getName()); } };
       m.carpetas.push(c); return c; } }) },
-    MailApp: { sendEmail: c => { if (opc.fallaCorreo) throw new Error("cuota de correo agotada"); m.correos.push(c); } },
+    MailApp: { getRemainingDailyQuota: () => opc.cuota === undefined ? 100 : opc.cuota, sendEmail: c => { if (opc.fallaCorreo) throw new Error("cuota de correo agotada"); m.correos.push(c); } },
     ContentService: { MimeType: { JSON: "json" }, createTextOutput: t => ({ texto: t, setMimeType() { return this; } }) },
     Utilities: {
       base64Decode: t => { if (!/^[A-Za-z0-9+/]*={0,2}$/.test(t)) throw new Error("base64"); return Array.from(new Int8Array(Buffer.from(t, "base64"))); },
@@ -216,5 +217,35 @@ caso("control de documentos: una fila por postulación con Sí, No aplica y el t
   assert.ok(d[1].slice(10, 16).every(x => x === "No aplica"));
   assert.strictEqual(d[1][16], 6);
   assert.match(m.correos[0].body, /Documentos recibidos \(6\):[\s\S]*Cartola Registro Social de Hogares[\s\S]*Conserve este correo/);
+});
+caso("aviso de apertura: guarda el correo una vez y lo envía solo dentro del plazo", () => {
+  const m = entorno();
+  assert.strictEqual(m.post({ tipo: "recordatorio", correo: "no-es-correo" }).ok, false);
+  assert.deepStrictEqual(m.post({ tipo: "recordatorio", correo: "Estudiante@Example.com" }), { ok: true });
+  assert.strictEqual(m.post({ tipo: "recordatorio", correo: "estudiante@example.com" }).repetido, true);
+  const h = m.pestanas["Recordatorios"];
+  assert.strictEqual(h.length, 2, "encabezado y un correo");
+  assert.strictEqual(h[1][1], "estudiante@example.com");
+  assert.strictEqual(m.candados, m.liberados, "el candado debe quedar liberado");
+  m.ctx.enPlazo = () => false;
+  assert.match(m.ctx.enviarRecordatorios(), /no está abierta/); assert.strictEqual(m.correos.length, 0);
+  m.ctx.enPlazo = () => true;
+  assert.match(m.ctx.enviarRecordatorios(), /enviados: 1\. Pendientes: 0/);
+  assert.strictEqual(m.correos[0].to, "estudiante@example.com");
+  assert.match(m.correos[0].body, /1 al 30 de marzo de 2027/);
+  assert.strictEqual(Object.prototype.toString.call(h[1][2]), "[object Date]", "queda la fecha de envío");
+  assert.match(m.ctx.enviarRecordatorios(), /enviados: 0\./, "no se envía dos veces");
+  const sinCuota = entorno({ cuota: 20 });
+  sinCuota.post({ tipo: "recordatorio", correo: "otra@example.com" }); sinCuota.ctx.enPlazo = () => true;
+  assert.match(sinCuota.ctx.enviarRecordatorios(), /enviados: 0\. Pendientes: 1/, "respeta la reserva de cuota");
+});
+caso("cifras públicas: solo totales, sin datos personales", () => {
+  const m = entorno();
+  m.post(postulacion()); m.post(postulacion({ rut: "22.222.222-2", tramo: "60%" }));
+  const j = JSON.parse(m.ctx.doGet({ parameter: { cifras: "1" } }).texto);
+  assert.strictEqual(j.ok, true); assert.strictEqual(j.total, 2);
+  assert.strictEqual(j.porTramo["40%"], 1); assert.strictEqual(j.porTramo["60%"], 1);
+  assert.strictEqual(Object.values(j.porDia).reduce((a, b) => a + b, 0), 2);
+  assert.ok(!/11\.111|Postulante de Prueba|example\.com/.test(JSON.stringify(j)), "no expone datos personales");
 });
 console.log("\n" + n + " grupos de pruebas correctos");

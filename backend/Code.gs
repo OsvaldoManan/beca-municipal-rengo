@@ -84,6 +84,17 @@ const COLUMNAS_SUBSANACION = ['Folio', 'Documento', 'Observación', 'Enviar avis
 
 // Pestaña de control: una fila por postulación con Sí, No o No aplica para cada documento.
 const HOJA_DOCUMENTOS = 'Documentos';
+
+// Aviso de apertura. Quien deja su correo en el sitio antes del 1 de marzo recibe un correo cuando abre la postulación.
+// El envío lo hace enviarRecordatorios(), que se ejecuta a mano desde el editor el 1 de marzo (ver docs/PANEL-INTERNO.md).
+const RECORDATORIOS_ACTIVOS = true;
+const HOJA_RECORDATORIOS = 'Recordatorios';
+const URL_PORTAL = 'https://osvaldomanan.github.io/beca-municipal-rengo/';
+// Correos que se dejan sin usar al enviar los avisos, para que los comprobantes de postulación no se queden sin cuota.
+const RESERVA_CORREOS = 20;
+
+// Cifras agregadas del proceso, sin datos personales, que el sitio muestra en «Estado y resultados».
+const PUBLICAR_CIFRAS = true;
 const NOMBRES_DOCUMENTOS = { cedula: 'Cédula de identidad', alumno_regular: 'Certificado de alumno regular', notas: 'Certificado de notas',
   rsh: 'Cartola Registro Social de Hogares', residencia: 'Certificado de residencia', declaracion: 'Declaración jurada simple',
   discapacidad: 'Credencial de discapacidad', cuidador: 'Credencial de cuidador', fud: 'Formulario Único de Derivación',
@@ -92,8 +103,12 @@ const NOMBRES_DOCUMENTOS = { cedula: 'Cédula de identidad', alumno_regular: 'Ce
 const MSJ_INTERNO = 'No fue posible registrar su postulación por un problema del sistema. ' +
   'Intente nuevamente en unos minutos y, si el problema continúa, escriba a ' + CORREO_BECA + '.';
 
-/** Comprobación de funcionamiento. Se abre la URL /exec en el navegador. No expone datos. */
-function doGet() {
+/** Comprobación de funcionamiento. Se abre la URL /exec en el navegador. No expone datos.
+ *  Con ?cifras=1 entrega las cifras agregadas del proceso, también sin datos personales. */
+function doGet(e) {
+  if (e && e.parameter && e.parameter.cifras) {
+    try { return responder(cifrasProceso()); } catch (x) { console.error('Cifras: ' + x); return rechazar('Cifras no disponibles.'); }
+  }
   return responder({
     ok: true,
     servicio: 'Beca Municipal Rengo. Recepción de postulaciones',
@@ -110,11 +125,12 @@ function doPost(e) {
   try {
     // Solicitudes livianas que no son postulaciones: estado por folio y consultas sin respuesta del asistente.
     var cuerpo = e && e.postData && e.postData.contents;
-    if (typeof cuerpo === 'string' && cuerpo.length < 2000 && /"tipo"\s*:\s*"(estado|consulta|encuesta)"/.test(cuerpo)) {
+    if (typeof cuerpo === 'string' && cuerpo.length < 2000 && /"tipo"\s*:\s*"(estado|consulta|encuesta|recordatorio)"/.test(cuerpo)) {
       var liviana = leerSolicitud(e);
       if (liviana.tipo === 'estado') return responder(consultarEstado(liviana.folio, liviana.rut));
       if (liviana.tipo === 'consulta') return responder(registrarConsulta(liviana.texto));
       if (liviana.tipo === 'encuesta') return responder(registrarEncuesta(liviana));
+      if (liviana.tipo === 'recordatorio') return responder(registrarRecordatorio(liviana.correo));
     }
     if (typeof cuerpo === 'string' && /^\s*\{\s*"tipo"\s*:\s*"reemplazo"/.test(cuerpo.slice(0, 80))) {
       return responder(recibirReemplazo(leerSolicitud(e)));
@@ -529,6 +545,92 @@ function recibirReemplazo(p) {
   DriveApp.getFolderById(id).createFile(Utilities.newBlob(bytes, a.tipo, clave + '-reemplazo-' + marca + EXTENSION[a.tipo]));
   h.getRange(fila + 2, 6).setValue(new Date());
   return { ok: true };
+}
+
+/**
+ * Guarda el correo de quien pide un aviso para la apertura de la postulación. No guarda nada más.
+ * Un correo repetido no se agrega de nuevo.
+ */
+function registrarRecordatorio(correo) {
+  if (!RECORDATORIOS_ACTIVOS) return { ok: false, error: 'El aviso por correo no está disponible.' };
+  var c = texto(correo, 120).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c)) return { ok: false, error: 'Revise el correo electrónico.' };
+  var candado = LockService.getScriptLock();
+  if (!candado.tryLock(10000)) return { ok: false, error: 'Intente nuevamente en un minuto.' };
+  try {
+    var libro = SpreadsheetApp.openById(HOJA_ID);
+    var h = libro.getSheetByName(HOJA_RECORDATORIOS) || libro.insertSheet(HOJA_RECORDATORIOS);
+    if (h.getLastRow() === 0) h.appendRow(['Fecha de solicitud', 'Correo', 'Aviso enviado']);
+    var n = h.getLastRow() - 1;
+    if (n > 0) {
+      var previos = h.getRange(2, 2, n, 1).getValues();
+      for (var i = 0; i < previos.length; i++) {
+        if (String(previos[i][0]).replace(/^'/, '').toLowerCase() === c) return { ok: true, repetido: true };
+      }
+    }
+    h.appendRow([new Date(), celda(c), '']);
+    return { ok: true };
+  } finally {
+    candado.releaseLock();
+  }
+}
+
+/**
+ * Envía el aviso de apertura a cada correo de la pestaña «Recordatorios» que aún no lo recibió.
+ * Solo funciona dentro del período de postulación. Si la cuota diaria de correo no alcanza, deja los
+ * restantes pendientes y basta con ejecutarla otra vez al día siguiente.
+ */
+function enviarRecordatorios() {
+  if (!enPlazo(new Date())) return 'La postulación no está abierta. Los avisos se envían desde el 1 de marzo de ' + ANIO_PROCESO + '.';
+  var h = SpreadsheetApp.openById(HOJA_ID).getSheetByName(HOJA_RECORDATORIOS);
+  if (!h || h.getLastRow() < 2) return 'No hay correos registrados.';
+  var filas = h.getRange(2, 1, h.getLastRow() - 1, 3).getValues();
+  var enviados = 0, pendientes = 0;
+  for (var i = 0; i < filas.length; i++) {
+    if (filas[i][2]) continue;
+    var correo = String(filas[i][1]).replace(/^'/, '');
+    if (MailApp.getRemainingDailyQuota() <= RESERVA_CORREOS) { pendientes++; continue; }
+    try {
+      MailApp.sendEmail({
+        to: correo,
+        subject: 'Abrió la postulación a la Beca Municipal Rengo ' + ANIO_PROCESO,
+        body: 'Le escribimos porque pidió un aviso en el sitio de la Beca Municipal Rengo.\n\n' +
+          'La postulación en línea está abierta del 1 al 30 de marzo de ' + ANIO_PROCESO + '. Puede postular en ' + URL_PORTAL + '\n\n' +
+          'Antes de comenzar, reúna sus documentos en PDF, JPG o PNG, de hasta 5 MB cada uno. ' +
+          'Si tiene dudas, escriba a ' + CORREO_BECA + '.\n\n' +
+          'Ilustre Municipalidad de Rengo\nDirección de Desarrollo Comunitario',
+        name: 'Beca Municipal Rengo'
+      });
+      h.getRange(i + 2, 3).setValue(new Date());
+      enviados++;
+    } catch (x) {
+      console.error('Aviso de apertura no enviado: ' + x);
+      pendientes++;
+    }
+  }
+  return 'Avisos enviados: ' + enviados + '. Pendientes: ' + pendientes + '.';
+}
+
+/**
+ * Cifras agregadas para el sitio: total de postulaciones, postulaciones por día y por tramo del RSH.
+ * No entrega nombres, RUT, correos ni ningún otro dato que identifique a una persona.
+ */
+function cifrasProceso() {
+  if (!PUBLICAR_CIFRAS) return { ok: false, error: 'Cifras no disponibles.' };
+  var hoja = SpreadsheetApp.openById(HOJA_ID).getSheets()[0];
+  var n = Math.max(0, hoja.getLastRow() - 1), total = 0, porTramo = {}, porDia = {};
+  TRAMOS.forEach(function (t) { porTramo[t] = 0; });
+  if (n > 0) {
+    hoja.getRange(2, 1, n, 21).getValues().forEach(function (f) {   // columnas A (folio) a U (tramo)
+      if (!/^BMR-/.test(String(f[0]))) return;
+      total++;
+      var tramo = String(f[20]);
+      if (porTramo.hasOwnProperty(tramo)) porTramo[tramo]++;
+      if (f[1] instanceof Date) { var dia = Utilities.formatDate(f[1], ZONA_HORARIA, 'yyyy-MM-dd'); porDia[dia] = (porDia[dia] || 0) + 1; }
+    });
+  }
+  return { ok: true, proceso: ANIO_PROCESO, total: total, porTramo: porTramo, porDia: porDia,
+    actualizado: Utilities.formatDate(new Date(), ZONA_HORARIA, 'dd-MM-yyyy HH:mm') };
 }
 
 function rechazar(mensaje) { return responder({ ok: false, error: mensaje }); }
