@@ -245,7 +245,7 @@ input:hover,select:hover{border-color:var(--azul)}
 /* ───────── pie ───────── */
 .pie{background:var(--marino);color:#D5E0EE;font-size:var(--t-s);line-height:1.6}
 .pie .cinta{height:4px}
-.pie-cols{padding-block:var(--e7) var(--e6);display:grid;grid-template-columns:minmax(0,1.1fr) repeat(3,minmax(0,1fr));gap:var(--e6) var(--e7)}
+.pie-cols{padding-block:var(--e7) var(--e6);display:grid;grid-template-columns:minmax(0,1.1fr) repeat(4,minmax(0,1fr));gap:var(--e6) var(--e7)}
 .pie-logos{display:flex;flex-wrap:wrap;gap:var(--e5);align-items:center;align-content:start}
 .pie-logos img{height:46px;width:auto;filter:brightness(0) invert(1);opacity:.95}
 .pie b{display:block;color:#fff;font:700 var(--t-xs)/1.4 var(--sans);letter-spacing:.1em;text-transform:uppercase;margin-bottom:var(--e2)}
@@ -268,3 +268,39 @@ input:hover,select:hover{border-color:var(--azul)}
 .simulador .checks{margin-top:var(--e2)}
 .simulador dl{border-top:1px solid var(--tinta);padding-top:var(--e3)}
 .simulador #simTotal{font:500 1.6rem/1 var(--serif)}
+
+/* Redes sociales y descarga de la ordenanza */
+.redes a{display:block}
+.descarga{font-size:var(--t-s)}
+.descarga a{font-weight:600}
+.descarga span{color:var(--tinta-suave);margin-left:.4rem}
+@media(max-width:1100px) and (min-width:941px){.pie-cols{grid-template-columns:repeat(4,minmax(0,1fr))}.pie-logos{grid-column:1/-1}}
+
+/* Figura animada de la cabecera: el recorrido de la beca, de la casa al birrete */
+.lado{display:grid;gap:var(--e4);min-width:0}
+.figura{margin:0}
+.figura svg{display:block;width:100%;height:auto;max-width:27rem;margin-inline:auto;overflow:visible}
+.f-halo{fill:#FBE9D7}
+.f-cerro{fill:#C9DBF0}
+.f-loma{fill:#CBE5CF}
+.f-linea{stroke:#9DB6D3;stroke-width:1.5}
+.f-trazo{fill:none;stroke:var(--tinta);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.f-blanco{fill:var(--superficie)}
+.f-tapa{fill:var(--azul);stroke:var(--tinta);stroke-width:2;stroke-linejoin:round}
+.f-pompon{fill:#E9A498;stroke:var(--tinta);stroke-width:1.5}
+.f-ruta path{fill:none;stroke:var(--azul);stroke-width:2.5;stroke-dasharray:2 8;stroke-linecap:round}
+.hito circle{fill:var(--superficie);stroke:var(--azul);stroke-width:2.5}
+.hito text{font:600 11px var(--sans);fill:var(--tinta);text-anchor:middle;letter-spacing:.02em}
+.hito{transform-box:fill-box;transform-origin:center bottom}
+@media(prefers-reduced-motion:no-preference){
+  .f-ruta{animation:f-revelar 2.6s ease-out both}
+  .hito{animation:f-hito .5s ease-out both}
+  .h1{animation-delay:.5s}.h2{animation-delay:1.1s}.h3{animation-delay:1.6s}.h4{animation-delay:2.2s}
+  .f-birrete{animation:f-flotar 4.5s ease-in-out 2.6s infinite}
+  .f-borla{transform-origin:334px 62px;animation:f-borla 2.8s ease-in-out infinite}
+}
+@keyframes f-revelar{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes f-hito{from{opacity:0;transform:translateY(6px) scale(.6)}to{opacity:1;transform:none}}
+@keyframes f-flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes f-borla{0%,100%{transform:rotate(9deg)}50%{transform:rotate(-9deg)}}
+.cab .w{align-items:center}

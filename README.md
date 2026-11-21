@@ -22,6 +22,7 @@ Para activar la recepción siga la guía [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md
 | `assets/` | Logos oficiales de la Municipalidad de Rengo |
 | `backend/Code.gs` | Servicio de recepción en Google Apps Script |
 | `tools/build.py` | Genera en `dist/` una versión del sitio en un solo archivo |
+| `documentos/` | Ordenanza de la beca en PDF, para descarga desde el sitio |
 | `tests/` | Pruebas automáticas |
 | `docs/` | Guías de despliegue, publicación en GitHub y protección de datos |
 | `.github/workflows/pages.yml` | Publicación automática en GitHub Pages |
