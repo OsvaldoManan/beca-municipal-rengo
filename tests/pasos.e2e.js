@@ -1,6 +1,7 @@
 // Prueba del portal: menú, accesos rápidos y formulario paso a paso.
 // Se ejecuta con   node tests/pasos.e2e.js   (requiere Playwright con Chromium)
 const assert = require("assert");
+const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
 const BASE = "file://" + path.join(__dirname, "..", "index.html");
@@ -10,6 +11,9 @@ const BASE = "file://" + path.join(__dirname, "..", "index.html");
   const caso = async (nombre, ancho, fn, vista = "#postular") => {
     const page = await b.newPage({ viewport: { width: ancho, height: 900 } });
     const errores = []; page.on("pageerror", e => errores.push(String(e)));
+    // Las pruebas corren en modo de revisión: se vacía ENDPOINT para no enviar nada al servicio real.
+    await page.route("**/js/app.js", route => route.fulfill({ contentType: "text/javascript",
+      body: fs.readFileSync(path.join(__dirname, "..", "js", "app.js"), "utf8").replace(/const ENDPOINT = "[^"]*";/, 'const ENDPOINT = "";') }));
     await page.goto(BASE + vista); await page.waitForSelector("#pasosModo", { state: "attached" });
     await fn(page);
     assert.deepStrictEqual(errores, []);

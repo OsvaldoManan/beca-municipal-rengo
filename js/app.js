@@ -3,7 +3,7 @@
 //
 // Dirección del servicio que recibe las postulaciones (aplicación web de Google Apps Script).
 // Mientras esté vacía, el sitio funciona en modo de revisión y no envía nada.
-const ENDPOINT = "";
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbx-wIr8mSdT_8Bx-0GFGUCnJBSzdbg_euczOehqse98iuf-crxM4gYAVO-C5LEjGqCM7w/exec";
 
 // Límites de los adjuntos. Deben coincidir con los de backend/Code.gs.
 const MAX_MB = 5, MAX_TOTAL_MB = 25, MB = 1048576;

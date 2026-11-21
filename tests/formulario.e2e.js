@@ -29,13 +29,14 @@ async function abrir(browser, { endpoint, respuesta, ancho } = {}) {
   const page = await ctx.newPage();
   const errores = [], envios = [];
   page.on("pageerror", e => errores.push(String(e)));
+  // ENDPOINT es una constante, por eso se reemplaza en el archivo mientras se carga.
+  // Siempre se reemplaza, para que las pruebas nunca envíen datos al servicio real.
+  await page.route("**/js/app.js", route => {
+    const js = fs.readFileSync(path.join(RAIZ, "js", "app.js"), "utf8");
+    assert.ok(/const ENDPOINT = "[^"]*";/.test(js), "app.js no contiene la constante ENDPOINT");
+    route.fulfill({ contentType: "text/javascript", body: js.replace(/const ENDPOINT = "[^"]*";/, 'const ENDPOINT = "' + (endpoint || "") + '";') });
+  });
   if (endpoint) {
-    // ENDPOINT es una constante, por eso se reemplaza en el archivo mientras se carga.
-    await page.route("**/js/app.js", route => {
-      const js = fs.readFileSync(path.join(RAIZ, "js", "app.js"), "utf8");
-      assert.ok(js.includes('const ENDPOINT = "";'), "app.js ya no contiene const ENDPOINT = \"\";");
-      route.fulfill({ contentType: "text/javascript", body: js.replace('const ENDPOINT = "";', 'const ENDPOINT = "' + endpoint + '";') });
-    });
     await page.route(endpoint, route => {
       envios.push(route.request());
       route.fulfill(Object.assign({ status: 200, headers: { "access-control-allow-origin": "*" } }, respuesta()));

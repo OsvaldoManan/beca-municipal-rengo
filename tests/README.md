@@ -13,7 +13,7 @@ Cada comando termina con código 0 si todo está correcto y distinto de 0 si alg
 ## Qué cubre cada una
 
 - `rut.test.js` evalúa `js/app.js` en un contexto sin página, de modo que solo se cargan sus funciones.
-- `formulario.e2e.js` abre `index.html` desde el disco y revisa el envío vacío, las validaciones, el modo de revisión, el borrador local, el envío correcto con folio, las respuestas de error del servidor, el doble envío y la ausencia de desborde horizontal a 400 px. Para simular el servicio reemplaza al vuelo la línea `const ENDPOINT = "";` de `js/app.js`, por lo que esa línea debe conservarse escrita exactamente así mientras el sitio esté en modo de revisión. Los elementos se buscan solo por `id`.
+- `formulario.e2e.js` abre `index.html` desde el disco y revisa el envío vacío, las validaciones, el modo de revisión, el borrador local, el envío correcto con folio, las respuestas de error del servidor, el doble envío y la ausencia de desborde horizontal a 400 px. Ambas pruebas reemplazan al vuelo el valor de `const ENDPOINT` en `js/app.js`, de modo que nunca envían datos al servicio real. Los elementos se buscan solo por `id`.
 - `backend.test.js` ejecuta `doPost` y `doGet` con objetos que imitan los servicios de Google.
 
 ## Qué no cubren
