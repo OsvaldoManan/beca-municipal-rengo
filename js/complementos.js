@@ -141,6 +141,80 @@ function hoyEnChile() {
     });
   }
 
+  /* ── Reemplazo de un documento solicitado por el municipio ── */
+  var fr = $("reemplazoForm");
+  if (fr) {
+    var rr = $("reemplazoResultado");
+    var decir = function (clase, titulo, detalle) {
+      rr.className = "aviso " + clase; rr.textContent = "";
+      var b = document.createElement("b"); b.textContent = titulo; var s = document.createElement("span"); s.textContent = detalle;
+      rr.append(b, s); rr.hidden = false;
+    };
+    fr.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var folio = $("reFolio").value.trim().toUpperCase(), rut = $("reRut").value.trim(), clave = $("reClave").value, archivo = $("reArchivo").files[0];
+      if (!/^BMR-\d{4}-\d{4}$/.test(folio)) return decir("error", "Revise el folio", "Tiene la forma BMR-" + PLAZO_ANIO + "-0001 y viene en su comprobante.");
+      if (typeof rutValido === "function" && !rutValido(rut)) return decir("error", "Revise el RUT", "Escriba el RUT del postulante con su dígito verificador.");
+      if (!clave) return decir("error", "Falta indicar el documento", "Seleccione cuál documento está reemplazando.");
+      if (!archivo) return decir("error", "Falta el archivo", "Adjunte el documento corregido.");
+      var tipo = archivo.type || ({ pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png" })[(archivo.name.split(".").pop() || "").toLowerCase()] || "";
+      if (["application/pdf", "image/jpeg", "image/png"].indexOf(tipo) < 0) return decir("error", "Formato no admitido", "El archivo debe ser PDF, JPG o PNG.");
+      if (archivo.size > 5 * 1048576) return decir("error", "Archivo demasiado grande", "El máximo es de 5 MB. Reduzca su tamaño y vuelva a adjuntarlo.");
+      if (typeof ENDPOINT === "undefined" || !ENDPOINT) return decir("info", "Envío aún no disponible", "Se activará cuando el municipio conecte la recepción de postulaciones.");
+      var boton = fr.querySelector("button"); boton.disabled = true;
+      var lector = new FileReader();
+      lector.onerror = function () { boton.disabled = false; decir("error", "No fue posible leer el archivo", "Vuelva a adjuntarlo e intente nuevamente."); };
+      lector.onload = function () {
+        fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ tipo: "reemplazo", folio: folio, rut: rut, clave: clave, archivo: { tipo: tipo, contenido: String(lector.result).split(",")[1] } }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (j && j.ok) { decir("exito", "Documento recibido", "Quedó asociado a su postulación " + folio + ". El equipo de la beca lo revisará."); fr.reset(); }
+            else decir("error", "No fue posible recibir el documento", (j && j.error) || "Intente nuevamente en unos minutos.");
+          })
+          .catch(function () { decir("error", "No fue posible enviar", "Revise su conexión e intente nuevamente."); })
+          .then(function () { boton.disabled = false; });
+      };
+      lector.readAsDataURL(archivo);
+    });
+  }
+
+  /* ── Encuesta breve después de postular (aparece junto al mensaje de éxito que crea js/app.js) ── */
+  var zonaPostular = $("postular");
+  if (zonaPostular && typeof MutationObserver === "function") {
+    new MutationObserver(function () {
+      var exito = $("exito");
+      if (!exito || $("encuesta")) return;
+      var f = document.createElement("form"); f.id = "encuesta"; f.className = "encuesta"; f.noValidate = true;
+      var h = document.createElement("h3"); h.textContent = "Ayúdenos a mejorar este trámite";
+      var p = document.createElement("p"); p.className = "ayuda"; p.textContent = "Son tres preguntas y la respuesta es anónima. No se asocia a su postulación.";
+      f.append(h, p);
+      [["encFacilidad", "¿Qué tan fácil fue completar la postulación?", "Muy difícil", "Muy fácil"],
+       ["encClaridad", "¿Qué tan clara fue la información sobre requisitos y documentos?", "Nada clara", "Muy clara"]].forEach(function (q) {
+        var fs = document.createElement("fieldset"), lg = document.createElement("legend"), es = document.createElement("div");
+        lg.textContent = q[1] + " (1 es " + q[2].toLowerCase() + " y 5 es " + q[3].toLowerCase() + ")"; es.className = "escala";
+        for (var n = 1; n <= 5; n++) {
+          var l = document.createElement("label"), r = document.createElement("input");
+          r.type = "radio"; r.name = q[0]; r.value = n; l.append(r, document.createTextNode(String(n))); es.append(l);
+        }
+        fs.append(lg, es); f.append(fs);
+      });
+      var lc = document.createElement("label"); lc.htmlFor = "encComentario"; lc.textContent = "¿Qué mejoraría? (opcional)";
+      var ta = document.createElement("textarea"); ta.id = "encComentario"; ta.maxLength = 500;
+      var bt = document.createElement("button"); bt.type = "submit"; bt.className = "btn sec"; bt.textContent = "Enviar respuesta";
+      f.append(lc, ta, bt);
+      exito.parentNode.insertBefore(f, exito.nextSibling);
+      f.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var val = function (n) { var r = f.querySelector('input[name="' + n + '"]:checked'); return r ? +r.value : null; };
+        var datos = { tipo: "encuesta", facilidad: val("encFacilidad"), claridad: val("encClaridad"), comentario: ta.value.trim().slice(0, 500) };
+        var fin = function (texto) { var g = document.createElement("p"); g.className = "aviso info"; g.id = "encuestaFin"; g.textContent = texto; f.replaceWith(g); };
+        if (!datos.facilidad && !datos.claridad && !datos.comentario) return;
+        if (typeof ENDPOINT === "undefined" || !ENDPOINT) return fin("Gracias por su respuesta.");
+        fetch(ENDPOINT, { method: "POST", body: JSON.stringify(datos) }).catch(function () {}).then(function () { fin("Gracias. Su respuesta ayuda a mejorar el proceso."); });
+      });
+    }).observe(zonaPostular, { childList: true, subtree: true });
+  }
+
   /* ── Resultados publicados (datos/resultados.json) ── */
   var caja = $("resultadosCaja");
   if (caja && typeof fetch === "function") {

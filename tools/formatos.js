@@ -66,6 +66,41 @@ const formatos = {
     <p class="nota">Anexo 2 de la ordenanza. Se entrega en papel en la Oficina de Partes de la municipalidad hasta el 30 de noviembre, con las boletas o facturas originales, sin enmiendas ni tachaduras.</p>`)
 };
 
+// Resumen de una página para entregar impreso en juntas de vecinos, liceos y oficinas municipales.
+const resumen = base("BECA MUNICIPAL RENGO 2027", `<style>
+    @page{margin:16mm 20mm}body{font-size:10.5pt;line-height:1.4}h1{margin-bottom:6pt;font-size:17pt}h2{font-size:11pt;margin:11pt 0 3pt;border-bottom:1px solid #000;padding-bottom:2pt;text-transform:uppercase;letter-spacing:.05em}
+    p{margin:0 0 5pt}ul{margin:0;padding-left:14pt}li{margin-bottom:1.5pt}.dos{display:grid;grid-template-columns:1fr 1fr;gap:0 20pt}
+    .caja{border:1.5pt solid #000;padding:7pt 10pt;margin:8pt 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8pt;text-align:center}
+    .caja b{display:block;font-size:13pt}.caja span{font-size:8.5pt;text-transform:uppercase;letter-spacing:.05em}header{margin-bottom:10pt}footer{display:none}.pie{font-size:8.5pt;text-align:center;margin-top:8pt}
+    td,th{font-size:9.5pt;padding:2.5pt 5pt;height:auto}</style>
+    <p style="text-align:center">Aporte de la Ilustre Municipalidad de Rengo para estudiantes de la comuna en educación superior</p>
+    <div class="caja"><div><b>$400.000</b><span>Monto, en una cuota</span></div><div><b>1 al 30 de marzo</b><span>Postulación</span></div><div><b>Mayo</b><span>Resultados y pago</span></div><div><b>30 de noviembre</b><span>Plazo para rendir</span></div></div>
+    <div class="dos"><div>
+    <h2>Quiénes pueden postular</h2><ul>
+      <li>Estudiantes que viven en Rengo y cursan una carrera en una universidad, instituto profesional o centro de formación técnica acreditado.</li>
+      <li>Promedio NEM 6,0 o superior si ingresa a primer año. Promedio 5,0 o superior desde segundo año.</li>
+      <li>Registro Social de Hogares actualizado en la comuna.</li>
+      <li>Cuenta bancaria a nombre del estudiante o de su tutor legal.</li>
+      <li>Correo electrónico personal.</li></ul>
+    <h2>No pueden postular</h2><ul>
+      <li>Quienes ya tienen título profesional o grado de licenciado, o cursan un postgrado.</li>
+      <li>Funcionarios municipales y prestadores de servicios a honorarios. Sus familiares sí pueden.</li></ul>
+    <h2>En qué se puede usar</h2><ul><li>Matrícula o arancel.</li><li>Materiales e insumos de la carrera.</li><li>Pasajes. No se acepta combustible.</li><li>Arriendo de hospedaje, con contrato.</li></ul>
+    </div><div>
+    <h2>Documentos que debe reunir</h2><ul>
+      <li>Cédula de identidad por ambos lados.</li><li>Certificado de alumno regular.</li>
+      <li>Concentración de notas de enseñanza media, o certificado de notas del último año aprobado.</li>
+      <li>Cartola del Registro Social de Hogares.</li><li>Certificado de residencia de la junta de vecinos.</li><li>Declaración jurada simple firmada.</li></ul>
+    <p style="margin-top:4pt"><b>Según su caso.</b> Credencial de discapacidad, credencial de cuidador, Formulario Único de Derivación del programa Familias, Seguridades y Oportunidades. Menores de 18 años, cédula y autorización del padre, madre o tutor.</p>
+    <h2>Cómo se asigna</h2>
+    <table><tr><th>Criterio</th><th class="n">Peso</th></tr><tr><td>Rendimiento académico</td><td class="n">40%</td></tr><tr><td>Tramo del Registro Social de Hogares</td><td class="n">45%</td></tr><tr><td>Condición de vulnerabilidad</td><td class="n">15%</td></tr></table>
+    <p>Las becas se asignan de mayor a menor puntaje, según los recursos del presupuesto municipal.</p>
+    </div></div>
+    <h2>Cómo postular</h2>
+    <p>La postulación es solo en línea, del 1 al 30 de marzo. No se reciben documentos en papel. Si no cuenta con computador o internet, la Oficina de Organizaciones Comunitarias de DIDECO dispone de un espacio y un profesional de apoyo. Consultas a <b>becaestudiantil@munirengo.cl</b>.</p>
+    <p><b>Rendición.</b> Quien recibe la beca debe rendir sus gastos con boletas originales en la Oficina de Partes, a más tardar el 30 de noviembre. No rendir impide acceder a beneficios municipales por dos años.</p>
+    <p class="pie">Ordenanza de Postulación y Entrega de la Beca Municipal Rengo, Decreto Alcaldicio N° 340 de 26 de febrero de 2026</p>`);
+
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage();
@@ -74,5 +109,8 @@ const formatos = {
     await p.pdf({ path: path.join(raiz, "documentos", "formatos", nombre + ".pdf"), format: "Letter", printBackground: true });
     console.log("ok  " + nombre + ".pdf");
   }
+  await p.setContent(resumen);
+  await p.pdf({ path: path.join(raiz, "documentos", "resumen-beca-municipal-rengo.pdf"), format: "Letter", printBackground: true });
+  console.log("ok  resumen-beca-municipal-rengo.pdf");
   await b.close();
 })();

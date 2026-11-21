@@ -32,6 +32,26 @@ Estas funciones exigen que `CUPOS` esté definido y que no queden empates por so
 
 La publicación incluye cifras agregadas y la nómina de seleccionados con folio y puntaje. No incluye nombres salvo que se cambie `PUBLICAR_NOMBRES` a `true`. Esa decisión corresponde al municipio, considerando que la ordenanza ordena publicar el listado de beneficiarios (artículo 9) y que se trata de un beneficio social.
 
+## Informe de cierre
+
+`prepararInformeCierre` escribe en la pestaña «Informe de cierre» las cifras agregadas del proceso. Incluye postulaciones recibidas, admisibles e inadmisibles, becas asignadas, monto ejecutado, puntaje de corte, distribución por tramo, institución y año de carrera, condiciones de vulnerabilidad declaradas y motivos de inadmisibilidad. No contiene datos de personas, por lo que puede copiarse a un memorándum o a una presentación para el Concejo.
+
+## Reemplazo de documentos ilegibles
+
+La ordenanza no regula la subsanación de antecedentes. Por eso esta función viene desactivada (`SUBSANACION_ACTIVA` en `Code.gs`) y solo debe activarse con el visto bueno de la Dirección de Asesoría Jurídica.
+
+1. `prepararSubsanaciones` crea la pestaña «Subsanaciones».
+2. El profesional anota el folio, elige el documento, escribe la observación y marca «Enviar aviso» con Sí.
+3. `enviarAvisosSubsanacion` envía el correo al postulante y anota la fecha. No repite avisos.
+4. El postulante sube el archivo en el sitio, sección de estado, con su folio y su RUT.
+5. El servicio guarda el archivo en la carpeta del postulante con el nombre del documento y la palabra «reemplazo», sin borrar el original, y anota la fecha en «Reemplazo recibido».
+
+El servicio rechaza cualquier archivo que no corresponda a una solicitud pendiente de esa pestaña.
+
+## Encuesta
+
+Después de postular, el sitio ofrece tres preguntas. Las respuestas llegan a la pestaña «Encuesta» con fecha, dos notas de 1 a 5 y un comentario. No se registra folio, RUT ni correo.
+
 ## Lectura de la pestaña «Nómina»
 
 | Columna | Significado |

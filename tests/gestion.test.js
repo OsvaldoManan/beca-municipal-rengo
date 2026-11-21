@@ -30,7 +30,7 @@ grupo("cuenta regresiva hacia el 1 de marzo, hora de Chile", () => {
 
 // ── Servicio (Code.gs + Puntaje.gs + Panel.gs) con una hoja simulada ──
 function servicio(filas, opciones = {}) {
-  const pestanas = {}, correos = [];
+  const pestanas = {}, correos = [], archivos = [];
   const hoja = datos => ({
     getLastRow: () => datos.length, appendRow: f => datos.push(f.slice()), clearContents: () => { datos.length = 0; }, setFrozenRows() {},
     getRange: (r, c, nr = 1, nc = 1) => ({
@@ -43,15 +43,17 @@ function servicio(filas, opciones = {}) {
   const libro = { getSheets: () => [principal], getSheetByName: n => pestanas[n] ? hoja(pestanas[n]) : null, insertSheet: n => { pestanas[n] = []; return hoja(pestanas[n]); } };
   const ctx = vm.createContext({
     console: { error() {}, log() {} }, SpreadsheetApp: { openById: () => libro }, MailApp: { sendEmail: m => correos.push(m) },
-    Utilities: { formatDate: () => "2027-05-10" }, ContentService: { createTextOutput: t => ({ setMimeType: () => t }), MimeType: { JSON: "json" } },
+    Utilities: { formatDate: () => "2027-05-10", base64Decode: b => Array.from(Buffer.from(b, "base64")), newBlob: (bytes, tipo, nombre) => ({ bytes, tipo, getName: () => nombre }) },
+    DriveApp: { getFolderById: id => ({ createFile: blob => { archivos.push({ carpeta: id, nombre: blob.getName() }); } }) }, ContentService: { createTextOutput: t => ({ setMimeType: () => t }), MimeType: { JSON: "json" } },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) }
   });
   let codigo = leer("backend/Code.gs") + "\n" + leer("backend/Puntaje.gs") + "\n" + leer("backend/Panel.gs");
   if (opciones.registrar) codigo = codigo.replace("const REGISTRAR_CONSULTAS = false;", "const REGISTRAR_CONSULTAS = true;");
+  if (opciones.subsanacion) codigo = codigo.replace("const SUBSANACION_ACTIVA = false;", "const SUBSANACION_ACTIVA = true;");
   if (opciones.cupos) codigo = codigo.replace("const CUPOS = 0;", "const CUPOS = " + opciones.cupos + ";");
-  vm.runInContext(codigo + "\nthis.api = { doPost, registrarResultados, prepararCorreos, enviarCorreos, prepararPublicacion, COLUMNAS, COLUMNAS_REVISION };", ctx);
+  vm.runInContext(codigo + "\nthis.api = { doPost, registrarResultados, prepararCorreos, enviarCorreos, prepararPublicacion, enviarAvisosSubsanacion, prepararInformeCierre, COLUMNAS, COLUMNAS_REVISION, COLUMNAS_SUBSANACION };", ctx);
   const post = cuerpo => JSON.parse(ctx.api.doPost({ postData: { contents: JSON.stringify(cuerpo) } }));
-  return { api: ctx.api, post, filas, pestanas, correos };
+  return { api: ctx.api, post, filas, pestanas, correos, archivos };
 }
 function hojaDePrueba(s) {
   const C = [...s.api.COLUMNAS, ...s.api.COLUMNAS_REVISION];
@@ -116,6 +118,61 @@ grupo("sin cupos definidos no se registran resultados ni se preparan correos", (
   const s = servicio([]); hojaDePrueba(s).forEach(f => s.filas.push(f));
   assert.throws(() => s.api.registrarResultados(), /CUPOS/);
   assert.throws(() => s.api.prepararCorreos(), /CUPOS/);
+});
+
+grupo("encuesta: anónima, con notas de 1 a 5 y sin fórmulas en el comentario", () => {
+  const s = servicio([]);
+  assert.strictEqual(s.post({ tipo: "encuesta", facilidad: 4, claridad: 9, comentario: "=1+1 muy claro" }).ok, true);
+  const h = s.pestanas["Encuesta"];
+  assert.strictEqual(h[1].length, 4);
+  assert.deepStrictEqual(Array.from(h[1].slice(1)), [4, "", "'=1+1 muy claro"]);
+  assert.strictEqual(s.post({ tipo: "encuesta" }).ok, false);
+});
+
+const PDF = Buffer.from("%PDF-1.4 documento de prueba").toString("base64");
+const reemplazo = (extra = {}) => ({ tipo: "reemplazo", folio: "BMR-2027-0001", rut: "11111111-1", clave: "rsh", archivo: { tipo: "application/pdf", contenido: PDF }, ...extra });
+grupo("reemplazo de documento: desactivado por defecto", () => {
+  const s = servicio([]); hojaDePrueba(s).forEach(f => s.filas.push(f));
+  const r = s.post(reemplazo());
+  assert.strictEqual(r.ok, false); assert.match(r.error, /no está habilitado/);
+  assert.strictEqual(s.archivos.length, 0);
+});
+grupo("reemplazo de documento: solo con solicitud pendiente, folio y RUT correctos", () => {
+  const s = servicio([], { subsanacion: true }); hojaDePrueba(s).forEach(f => s.filas.push(f));
+  const colCarpeta = s.api.COLUMNAS.indexOf("Carpeta");
+  s.filas[1][colCarpeta] = "https://drive.google.com/drive/folders/CARPETA_0001";
+  assert.match(s.post(reemplazo()).error, /No hay una solicitud de reemplazo pendiente/);          // nadie lo pidió
+  s.pestanas["Subsanaciones"] = [Array.from(s.api.COLUMNAS_SUBSANACION), ["BMR-2027-0001", "Cartola Registro Social de Hogares", "Ilegible", "Sí", "", ""]];
+  assert.strictEqual(s.api.enviarAvisosSubsanacion(), 1);
+  assert.match(s.correos[0].body, /Cartola Registro Social de Hogares[\s\S]*Ilegible[\s\S]*Me pidieron reemplazar un documento/);
+  assert.strictEqual(s.api.enviarAvisosSubsanacion(), 0);                                           // no repite el aviso
+  assert.match(s.post(reemplazo({ rut: "22222222-2" })).error, /No encontramos/);                   // RUT de otra persona
+  assert.match(s.post(reemplazo({ clave: "cedula" })).error, /No hay una solicitud/);               // otro documento
+  assert.match(s.post(reemplazo({ archivo: { tipo: "application/pdf", contenido: Buffer.from("no es pdf").toString("base64") } })).error, /no corresponde/);
+  assert.strictEqual(s.archivos.length, 0);
+  assert.strictEqual(s.post(reemplazo()).ok, true);
+  assert.strictEqual(s.archivos.length, 1);
+  assert.strictEqual(s.archivos[0].carpeta, "CARPETA_0001");
+  assert.match(s.archivos[0].nombre, /^rsh-reemplazo-.*\.pdf$/);
+  assert.ok(s.pestanas["Subsanaciones"][1][5] instanceof Date || s.pestanas["Subsanaciones"][1][5]);
+  assert.match(s.post(reemplazo()).error, /No hay una solicitud/);                                  // ya fue recibido
+});
+
+grupo("informe de cierre: cifras agregadas y sin datos personales", () => {
+  const s = servicio([], { cupos: 1 }); hojaDePrueba(s).forEach(f => s.filas.push(f));
+  assert.ok(s.api.prepararInformeCierre() > 20);
+  const h = s.pestanas["Informe de cierre"], valor = r => (h.find(f => f[0] === r) || [])[1];
+  assert.strictEqual(valor("Postulaciones recibidas"), 4);
+  assert.strictEqual(valor("Postulaciones admisibles"), 2);
+  assert.strictEqual(valor("Postulaciones inadmisibles"), 1);
+  assert.strictEqual(valor("Postulaciones sin revisar"), 1);
+  assert.strictEqual(valor("Becas asignadas"), 1);
+  assert.strictEqual(valor("Monto ejecutado ($)"), 400000);
+  assert.strictEqual(valor("Puntaje de corte (último seleccionado)"), 85);
+  assert.strictEqual(valor("40%"), 3);
+  assert.strictEqual(valor("Falta el certificado de residencia"), 1);
+  const todo = JSON.stringify(h);
+  assert.ok(!/11111111|correo\.cl|Nombre BMR/.test(todo));
 });
 
 console.log(grupos + " grupos de pruebas correctos");

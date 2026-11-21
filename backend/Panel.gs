@@ -46,6 +46,10 @@ function onOpen() {
       .addItem('4. Preparar correos de resultado', 'prepararCorreos')
       .addItem('5. Enviar correos marcados', 'enviarCorreos')
       .addItem('6. Preparar publicación de resultados', 'prepararPublicacion')
+      .addItem('7. Preparar informe de cierre', 'prepararInformeCierre')
+      .addSeparator()
+      .addItem('Documentos por reemplazar: crear pestaña', 'prepararSubsanaciones')
+      .addItem('Documentos por reemplazar: enviar avisos marcados', 'enviarAvisosSubsanacion')
       .addToUi();
   } catch (x) { /* proyecto independiente: no hay menú */ }
 }
@@ -315,5 +319,117 @@ function prepararResumen() {
   const filas = armarResumen(principal.getName());
   h.getRange(3, 1, filas.length, 1).setValues(filas.map(function (f) { return [f[0]]; }));
   filas.forEach(function (f, i) { if (f[1]) h.getRange(3 + i, 2).setFormula(f[1]); });
+  return filas.length;
+}
+
+/* ───────── reemplazo de documentos ilegibles ───────── */
+
+/** Crea la pestaña «Subsanaciones», donde el equipo anota qué documento debe reenviar cada postulante. */
+function prepararSubsanaciones() {
+  const libro = SpreadsheetApp.openById(HOJA_ID);
+  var h = libro.getSheetByName(HOJA_SUBSANACIONES) || libro.insertSheet(HOJA_SUBSANACIONES);
+  if (h.getLastRow() === 0) h.appendRow(COLUMNAS_SUBSANACION);
+  const filas = Math.max(h.getMaxRows() - 1, 1);
+  h.getRange(2, 2, filas, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireValueInList(CLAVES.map(function (k) { return NOMBRES_DOCUMENTOS[k]; }), true).setAllowInvalid(false).build());
+  h.getRange(2, 4, filas, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['Sí', 'No'], true).setAllowInvalid(false).build());
+  h.setFrozenRows(1);
+}
+
+/** Texto del aviso. Lógica pura. */
+function armarAvisoSubsanacion(nombre, folio, documento, observacion, anio, correoBeca) {
+  return {
+    asunto: 'Beca Municipal Rengo ' + anio + '. Necesitamos que reenvíe un documento, folio ' + folio,
+    cuerpo: 'Estimado(a) ' + nombre + ':\n\nAl revisar su postulación con folio ' + folio + ' no fue posible validar el siguiente documento: ' + documento + '.' +
+      (observacion ? '\nObservación: ' + observacion + '.' : '') +
+      '\n\nPara enviarlo nuevamente ingrese al sitio de la beca, sección «Estado y resultados», opción «Me pidieron reemplazar un documento». ' +
+      'Necesita su folio, su RUT y el archivo en PDF, JPG o PNG, de hasta 5 MB.\n\nPara consultas escriba a ' + correoBeca + ' indicando su folio.' +
+      '\n\nDirección de Desarrollo Comunitario\nIlustre Municipalidad de Rengo'
+  };
+}
+
+/** Envía los avisos de las filas con «Enviar aviso» en Sí y sin fecha en «Aviso enviado». */
+function enviarAvisosSubsanacion() {
+  if (!SUBSANACION_ACTIVA) throw new Error('El reemplazo de documentos está desactivado (SUBSANACION_ACTIVA en Code.gs).');
+  const libro = SpreadsheetApp.openById(HOJA_ID);
+  const h = libro.getSheetByName(HOJA_SUBSANACIONES);
+  if (!h || h.getLastRow() < 2) throw new Error('No hay documentos anotados en la pestaña «Subsanaciones».');
+  const hoja = libro.getSheets()[0], n = hoja.getLastRow() - 1;
+  const postulantes = {};
+  (n > 0 ? hoja.getRange(2, 1, n, COLUMNAS.length).getValues() : []).forEach(function (f) {
+    postulantes[String(f[0]).toUpperCase().trim()] = { nombre: (String(f[2]) + ' ' + String(f[3])).trim(), correo: String(f[COLUMNAS.indexOf('Correo')]) };
+  });
+  const filas = h.getRange(2, 1, h.getLastRow() - 1, COLUMNAS_SUBSANACION.length).getValues();
+  var enviados = 0;
+  filas.forEach(function (f, i) {
+    if (String(f[3]).trim().toLowerCase().replace('í', 'i') !== 'si' || f[4]) return;
+    const p = postulantes[String(f[0]).toUpperCase().trim()];
+    if (!p || !p.correo) return;
+    const aviso = armarAvisoSubsanacion(p.nombre, String(f[0]).toUpperCase().trim(), String(f[1]), String(f[2]).trim(), ANIO_PROCESO, CORREO_BECA);
+    MailApp.sendEmail({ to: p.correo, replyTo: CORREO_BECA, subject: aviso.asunto, body: aviso.cuerpo });
+    h.getRange(i + 2, 5).setValue(new Date());
+    enviados++;
+  });
+  return enviados;
+}
+
+/* ───────── informe de cierre ───────── */
+
+/**
+ * Cifras del proceso para informar al Concejo. Lógica pura: devuelve filas [rótulo, valor, porcentaje].
+ * Solo cifras agregadas, sin datos de personas.
+ */
+function armarInforme(filas, r, cupos, anio) {
+  var col = function (nombre) { return COLUMNAS.indexOf(nombre); };
+  var registradas = filas.filter(function (f) { return String(f[0]).trim() !== ''; });
+  var total = registradas.length, sel = r.nomina.filter(function (p) { return p.estado === 'Seleccionado'; });
+  var pct = function (n, d) { return d ? Math.round(n * 1000 / d) / 10 + '%' : ''; };
+  var contar = function (lista, clave) {
+    var m = {}; lista.forEach(function (x) { var k = clave(x) || 'Sin dato'; m[k] = (m[k] || 0) + 1; });
+    return Object.keys(m).map(function (k) { return [k, m[k]]; }).sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });
+  };
+  var puntajes = r.nomina.map(function (p) { return p.total; });
+  var prom = puntajes.length ? Math.round(puntajes.reduce(function (a, b) { return a + b; }, 0) * 100 / puntajes.length) / 100 : '';
+  var o = [['Beca Municipal Rengo ' + anio + '. Informe de cierre del proceso', '', ''], ['', '', ''],
+    ['1. Resultado general', 'Cantidad', 'Porcentaje'],
+    ['Postulaciones recibidas', total, ''],
+    ['Postulaciones admisibles', r.nomina.length, pct(r.nomina.length, total)],
+    ['Postulaciones inadmisibles', r.inadmisibles.length, pct(r.inadmisibles.length, total)],
+    ['Postulaciones sin revisar', r.pendientes.length, pct(r.pendientes.length, total)],
+    ['Cupos definidos', cupos > 0 ? cupos : 'Sin definir', ''],
+    ['Becas asignadas', sel.length, pct(sel.length, r.nomina.length)],
+    ['Monto ejecutado ($)', sel.length * MONTO_BECA, ''],
+    ['Puntaje promedio de admisibles', prom, ''],
+    ['Puntaje de corte (último seleccionado)', sel.length ? sel[sel.length - 1].total : '', ''],
+    ['Empates que requieren sorteo', r.sorteos, ''], ['', '', '']];
+  var bloque = function (titulo, pares, den) {
+    o.push([titulo, 'Cantidad', 'Porcentaje']);
+    pares.forEach(function (x) { o.push([x[0], x[1], pct(x[1], den)]); });
+    o.push(['', '', '']);
+  };
+  bloque('2. Postulaciones por tramo del Registro Social de Hogares', contar(registradas, function (f) { return String(f[col('Tramo RSH')]).trim(); })
+    .sort(function (a, b) { return parseInt(a[0], 10) - parseInt(b[0], 10); }), total);
+  bloque('3. Becas asignadas por tramo', contar(sel, function (p) { return p.tramo; }).sort(function (a, b) { return parseInt(a[0], 10) - parseInt(b[0], 10); }), sel.length);
+  bloque('4. Postulaciones por institución', contar(registradas, function (f) { return String(f[col('Institución')]).trim(); }), total);
+  bloque('5. Postulaciones por año que cursa', contar(registradas, function (f) { var a = String(f[col('Año que cursa')]).trim(); return a ? 'Año ' + a : ''; })
+    .sort(function (a, b) { return a[0] < b[0] ? -1 : 1; }), total);
+  var si = function (x) { return String(x).trim().toLowerCase().replace('í', 'i') === 'si'; };
+  bloque('6. Condición de vulnerabilidad declarada', [
+    ['Credencial de discapacidad del estudiante', registradas.filter(function (f) { return si(f[col('Credencial discapacidad')]); }).length],
+    ['Credencial de discapacidad de un familiar', registradas.filter(function (f) { return si(f[col('Credencial discapacidad familiar')]); }).length],
+    ['Credencial de cuidador', registradas.filter(function (f) { return si(f[col('Credencial cuidador')]); }).length],
+    ['Programa Familias, Seguridades y Oportunidades', registradas.filter(function (f) { return si(f[col('Programa Familias')]); }).length]], total);
+  bloque('7. Motivos de inadmisibilidad', contar(r.inadmisibles, function (p) { return p.motivo; }), r.inadmisibles.length);
+  return o;
+}
+
+/** Escribe el informe en la pestaña «Informe de cierre». Se puede copiar a un memorándum o presentación. */
+function prepararInformeCierre() {
+  const x = leerNomina();
+  const filas = armarInforme(x.filas, x.r, CUPOS, ANIO_PROCESO);
+  const libro = SpreadsheetApp.openById(HOJA_ID);
+  var h = libro.getSheetByName('Informe de cierre') || libro.insertSheet('Informe de cierre');
+  h.clearContents();
+  h.getRange(1, 1, filas.length, 3).setValues(filas);
   return filas.length;
 }

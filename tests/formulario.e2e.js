@@ -8,7 +8,8 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const RAIZ = path.join(__dirname, "..");
-const PAGINA = "file://" + path.join(RAIZ, "index.html");
+// El portal muestra una vista a la vez. Estas pruebas abren directamente la de postulación.
+const PAGINA = "file://" + path.join(RAIZ, "index.html") + "#postular";
 const FALSO = "https://recepcion-de-prueba.invalid/exec";   // dominio reservado, no existe
 const FOLIO = "BMR-2027-0001";
 

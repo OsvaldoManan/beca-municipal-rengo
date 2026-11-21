@@ -73,6 +73,15 @@ const COLUMNAS_REVISION = ['Admisible', 'Motivo de inadmisibilidad', 'Residencia
 const REGISTRAR_CONSULTAS = false;
 const HOJA_CONSULTAS = 'Consultas sin respuesta';
 
+// Encuesta anónima que el sitio ofrece después de postular.
+const HOJA_ENCUESTA = 'Encuesta';
+
+// Reemplazo de documentos ilegibles o incompletos. La ordenanza no regula la subsanación, por lo que viene desactivado.
+// Actívelo solo con el visto bueno de la Dirección de Asesoría Jurídica. Ver docs/PANEL-INTERNO.md.
+const SUBSANACION_ACTIVA = false;
+const HOJA_SUBSANACIONES = 'Subsanaciones';
+const COLUMNAS_SUBSANACION = ['Folio', 'Documento', 'Observación', 'Enviar aviso', 'Aviso enviado', 'Reemplazo recibido'];
+
 // Pestaña de control: una fila por postulación con Sí, No o No aplica para cada documento.
 const HOJA_DOCUMENTOS = 'Documentos';
 const NOMBRES_DOCUMENTOS = { cedula: 'Cédula de identidad', alumno_regular: 'Certificado de alumno regular', notas: 'Certificado de notas',
@@ -101,10 +110,14 @@ function doPost(e) {
   try {
     // Solicitudes livianas que no son postulaciones: estado por folio y consultas sin respuesta del asistente.
     var cuerpo = e && e.postData && e.postData.contents;
-    if (typeof cuerpo === 'string' && cuerpo.length < 2000 && /"tipo"\s*:\s*"(estado|consulta)"/.test(cuerpo)) {
+    if (typeof cuerpo === 'string' && cuerpo.length < 2000 && /"tipo"\s*:\s*"(estado|consulta|encuesta)"/.test(cuerpo)) {
       var liviana = leerSolicitud(e);
       if (liviana.tipo === 'estado') return responder(consultarEstado(liviana.folio, liviana.rut));
       if (liviana.tipo === 'consulta') return responder(registrarConsulta(liviana.texto));
+      if (liviana.tipo === 'encuesta') return responder(registrarEncuesta(liviana));
+    }
+    if (typeof cuerpo === 'string' && /^\s*\{\s*"tipo"\s*:\s*"reemplazo"/.test(cuerpo.slice(0, 80))) {
+      return responder(recibirReemplazo(leerSolicitud(e)));
     }
 
     if (CONTROLAR_PLAZO && !enPlazo(new Date())) {
@@ -463,6 +476,58 @@ function registrarConsulta(consulta) {
   var h = libro.getSheetByName(HOJA_CONSULTAS) || libro.insertSheet(HOJA_CONSULTAS);
   if (h.getLastRow() === 0) h.appendRow(['Fecha', 'Consulta sin respuesta']);
   h.appendRow([new Date(), celda(t)]);
+  return { ok: true };
+}
+
+/** Guarda una respuesta de la encuesta. No registra folio, RUT ni correo. */
+function registrarEncuesta(p) {
+  var nota = function (x) { var n = parseInt(x, 10); return n >= 1 && n <= 5 ? n : ''; };
+  var f = nota(p.facilidad), c = nota(p.claridad), com = texto(p.comentario, 500);
+  if (f === '' && c === '' && !com) return { ok: false, error: 'Respuesta vacía.' };
+  var libro = SpreadsheetApp.openById(HOJA_ID);
+  var h = libro.getSheetByName(HOJA_ENCUESTA) || libro.insertSheet(HOJA_ENCUESTA);
+  if (h.getLastRow() === 0) h.appendRow(['Fecha', 'Facilidad (1 a 5)', 'Claridad de la información (1 a 5)', 'Comentario']);
+  h.appendRow([new Date(), f, c, celda(com)]);
+  return { ok: true };
+}
+
+/**
+ * Recibe el reemplazo de un documento. Exige tres cosas a la vez: que la función esté activa, que el folio y el RUT
+ * coincidan, y que DIDECO haya pedido ese documento en la pestaña «Subsanaciones» y aún no lo haya recibido.
+ * El archivo se guarda en la carpeta del postulante sin borrar el original.
+ */
+function recibirReemplazo(p) {
+  if (!SUBSANACION_ACTIVA) return { ok: false, error: 'El reemplazo de documentos no está habilitado. Escriba a ' + CORREO_BECA + '.' };
+  var folio = texto(p.folio, 20).toUpperCase(), clave = texto(p.clave, 30), a = p.archivo || {};
+  if (!/^BMR-\d{4}-\d{4}$/.test(folio) || !rutValido(texto(p.rut, 15))) return { ok: false, error: 'Revise el folio y el RUT.' };
+  if (CLAVES.indexOf(clave) < 0) return { ok: false, error: 'Indique cuál documento está reemplazando.' };
+  if (TIPOS.indexOf(a.tipo) < 0 || typeof a.contenido !== 'string') return { ok: false, error: 'El archivo debe ser PDF, JPG o PNG.' };
+  var bytes;
+  try { bytes = Utilities.base64Decode(a.contenido); } catch (err) { return { ok: false, error: 'El documento llegó dañado. Vuelva a adjuntarlo.' }; }
+  if (!bytes.length || bytes.length > MAX_BYTES) return { ok: false, error: 'El archivo supera los 5 MB o está vacío.' };
+  if (!firmaCorrecta(bytes, a.tipo)) return { ok: false, error: 'El archivo no corresponde a un PDF, JPG o PNG válido.' };
+
+  var libro = SpreadsheetApp.openById(HOJA_ID), hoja = libro.getSheets()[0];
+  var n = hoja.getLastRow() - 1;
+  var filas = n > 0 ? hoja.getRange(2, 1, n, COLUMNAS.length).getValues() : [];
+  var buscado = rutLimpio(p.rut), carpeta = null;
+  for (var i = 0; i < filas.length; i++) {
+    if (String(filas[i][0]).toUpperCase() === folio && rutLimpio(filas[i][4]) === buscado) { carpeta = String(filas[i][COLUMNAS.indexOf('Carpeta')]); break; }
+  }
+  if (carpeta === null) return { ok: false, error: 'No encontramos una postulación con ese folio y ese RUT.' };
+  var h = libro.getSheetByName(HOJA_SUBSANACIONES);
+  var m = h ? h.getLastRow() - 1 : 0;
+  var pedidos = m > 0 ? h.getRange(2, 1, m, COLUMNAS_SUBSANACION.length).getValues() : [];
+  var fila = -1;
+  for (var j = 0; j < pedidos.length; j++) {
+    if (String(pedidos[j][0]).toUpperCase().trim() === folio && String(pedidos[j][1]).trim() === NOMBRES_DOCUMENTOS[clave] && !pedidos[j][5]) { fila = j; break; }
+  }
+  if (fila < 0) return { ok: false, error: 'No hay una solicitud de reemplazo pendiente para ese documento. Si recibió un aviso, revise que eligió el documento correcto.' };
+  var id = (/folders\/([\w-]+)/.exec(carpeta) || [])[1];
+  if (!id) { console.error('Reemplazo de ' + folio + ': la fila no tiene carpeta.'); return { ok: false, error: MSJ_INTERNO }; }
+  var marca = Utilities.formatDate(new Date(), ZONA_HORARIA, 'yyyyMMdd-HHmm');
+  DriveApp.getFolderById(id).createFile(Utilities.newBlob(bytes, a.tipo, clave + '-reemplazo-' + marca + EXTENSION[a.tipo]));
+  h.getRange(fila + 2, 6).setValue(new Date());
   return { ok: true };
 }
 

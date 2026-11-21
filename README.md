@@ -130,3 +130,9 @@ El asistente puede registrar las consultas que no supo responder. Viene desactiv
 ## Estructura del portal
 
 El portal tiene un menú superior fijo, una franja de accesos rápidos bajo la cabecera y secciones en franjas alternadas. El formulario se presenta paso a paso (`js/pasos.js`), con una barra de avance y la opción de ver todos los pasos en una sola página. La validación y el envío siguen en `js/app.js`.
+
+## Vistas, buscador y resumen
+
+`js/vistas.js` agrupa las secciones en siete vistas (Inicio, Requisitos y documentos, Puntaje, Uso y rendición, Postular, Estado y resultados, Ayuda). Cada una tiene su propia dirección, por ejemplo `index.html#puntaje`, y el portal sigue siendo un solo archivo que se abre sin servidor. Sin JavaScript se muestran todas las secciones seguidas.
+
+`js/buscador.js` busca en el texto del portal y en las respuestas del asistente. `documentos/resumen-beca-municipal-rengo.pdf` es un resumen de una página para imprimir, generado con `node tools/formatos.js`.

@@ -29,15 +29,13 @@
 <div class="cinta" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
 <nav class="menu" aria-label="Menú principal"><div class="w">
   <button type="button" class="menu-boton" id="menuBoton" aria-expanded="false" aria-controls="menuLista">Menú</button>
-  <ol class="indice" id="menuLista">
-    <li><a href="#fundamento">La beca</a></li>
-    <li><a href="#requisitos">Requisitos</a></li>
-    <li><a href="#documentos">Documentos</a></li>
-    <li><a href="#fechas">Calendario</a></li>
+  <ol class="navegacion" id="menuLista">
+    <li><a href="#inicio">Inicio</a></li>
+    <li><a href="#requisitos">Requisitos y documentos</a></li>
     <li><a href="#puntaje">Puntaje</a></li>
-    <li><a href="#uso">Rendición</a></li>
-    <li><a href="#preguntas">Preguntas</a></li>
-    <li><a href="#estado">Estado</a></li>
+    <li><a href="#uso">Uso y rendición</a></li>
+    <li><a href="#estado">Estado y resultados</a></li>
+    <li><a href="#ayuda">Ayuda</a></li>
   </ol>
   <div class="acc" role="group" aria-label="Accesibilidad">
     <button type="button" id="accMenos" aria-label="Reducir el tamaño de la letra">A−</button>
@@ -47,13 +45,14 @@
   <a class="btn menu-cta" href="#postular">Postular</a>
 </div></nav>
 
-<div class="cab"><div class="w">
+<div class="cab" id="inicio"><div class="w">
   <div class="intro">
     <p class="sobre">Proceso 2027 · Educación superior</p>
     <h1>Beca Municipal Rengo</h1>
     <p class="bajada">Un aporte de $400.000 de la Ilustre Municipalidad de Rengo para estudiantes de la comuna que cursan una carrera en una universidad, instituto profesional o centro de formación técnica. Se asigna por puntaje y considera la situación del hogar y el rendimiento académico.</p>
     <div class="botones"><a class="btn" href="#postular">Postular en línea</a><a class="btn sec" href="#requisitos">Revisar requisitos</a></div>
     <p class="plazo" data-plazo hidden></p>
+    <p class="descarga"><a href="documentos/resumen-beca-municipal-rengo.pdf" target="_blank" rel="noopener">Resumen de una página para imprimir</a> <span>PDF</span></p>
     <p class="descarga"><a href="documentos/ordenanza-beca-municipal-rengo.pdf" target="_blank" rel="noopener">Descargar la ordenanza completa</a> <span>PDF, 10 MB</span></p>
   </div>
   <div class="lado">
@@ -251,6 +250,7 @@
       <div class="pc"><dt>Condición de vulnerabilidad</dt><dd>Suma puntos por discapacidad, labores de cuidado o participación en el programa Familias, Seguridades y Oportunidades.</dd></div>
     </dl>
   </div>
+  <details class="plegable"><summary>Ver la tabla completa de puntajes por criterio</summary>
   <div class="tabla"><table class="t4">
     <thead><tr><th>Criterio</th><th class="n">Peso</th><th>Situación</th><th class="n">Puntos</th></tr></thead>
     <tbody>
@@ -267,6 +267,7 @@
       <tr><td>Familiar con credencial de discapacidad</td><td class="n">75</td></tr>
     </tbody>
   </table></div>
+  </details>
   <div class="ejemplo simulador" id="simulador">
     <h3>Calcule su puntaje estimado</h3>
     <p>Cambie los datos y el cálculo se actualiza. El ejemplo inicial corresponde a un estudiante de primer año con NEM 6,4 y hogar en el tramo del 40%.</p>
@@ -314,6 +315,7 @@
       <tr><th>Arriendo de hospedaje</th><td>Contrato de arriendo vigente y comprobante del pago mensual.</td></tr>
     </tbody>
   </table></div>
+  <details class="plegable"><summary>Ver las reglas de la rendición y qué ocurre si falla</summary>
   <div class="cols">
     <div class="col">
       <h3>Reglas de una rendición válida</h3>
@@ -334,6 +336,17 @@
       </ul>
     </div>
   </div>
+  </details>
+</section>
+
+<section id="ayuda">
+  <div class="enc"><p class="norma">Ayuda</p><h2>Busque en el portal o consulte al asistente</h2></div>
+  <form id="buscador" class="buscador" role="search" novalidate>
+    <label for="buscarTexto">Escriba lo que necesita encontrar</label>
+    <div><input type="search" id="buscarTexto" placeholder="Por ejemplo, certificado de residencia" autocomplete="off"><button class="btn" type="submit">Buscar</button></div>
+  </form>
+  <div id="buscarResultados" class="buscar-resultados" aria-live="polite"></div>
+  <p class="nota">También puede usar el botón «Consultas sobre la ordenanza», abajo a la derecha, o escribir a becaestudiantil@munirengo.cl.</p>
 </section>
 
 <section id="preguntas">
@@ -477,6 +490,23 @@
     <button class="btn" type="submit">Consultar estado</button>
   </form>
   <div id="estadoResultado" class="aviso info" aria-live="polite" hidden></div>
+  <details class="plegable" id="reemplazo">
+    <summary>Me pidieron reemplazar un documento</summary>
+    <p>Use este formulario solo si recibió un correo del municipio que le solicita enviar nuevamente un documento. Necesita su folio, su RUT y el archivo corregido en PDF, JPG o PNG, de hasta 5 MB.</p>
+    <form id="reemplazoForm" class="reemplazo" novalidate>
+      <div class="campo"><label for="reFolio">Folio</label><input type="text" id="reFolio" placeholder="BMR-2027-0001" autocomplete="off"></div>
+      <div class="campo"><label for="reRut">RUT del postulante</label><input type="text" id="reRut" placeholder="12.345.678-9" autocomplete="off"></div>
+      <div class="campo"><label for="reClave">Documento que reemplaza</label><select id="reClave">
+        <option value="">Seleccione</option><option value="cedula">Cédula de identidad</option><option value="alumno_regular">Certificado de alumno regular</option>
+        <option value="notas">Certificado de notas</option><option value="rsh">Cartola del Registro Social de Hogares</option><option value="residencia">Certificado de residencia</option>
+        <option value="declaracion">Declaración jurada simple</option><option value="discapacidad">Credencial de discapacidad</option><option value="cuidador">Credencial de cuidador</option>
+        <option value="fud">Formulario Único de Derivación</option><option value="cedula_tutor">Cédula del tutor</option><option value="autorizacion">Autorización del tutor</option>
+        <option value="declaracion_tutor">Declaración jurada del tutor</option></select></div>
+      <div class="campo"><label for="reArchivo">Archivo nuevo</label><input type="file" id="reArchivo" accept=".pdf,.jpg,.jpeg,.png"></div>
+      <button class="btn" type="submit">Enviar documento</button>
+    </form>
+    <div id="reemplazoResultado" class="aviso info" aria-live="polite" hidden></div>
+  </details>
   <div id="resultadosCaja" class="resultados"><p class="nota">Los resultados del proceso 2027 se publicarán aquí en mayo.</p></div>
 </section>
 </main>
@@ -503,5 +533,7 @@
 <script src="js/asistente.js"></script>
 <script src="js/complementos.js"></script>
 <script src="js/pasos.js"></script>
+<script src="js/buscador.js"></script>
+<script src="js/vistas.js"></script>
 </body>
 </html>

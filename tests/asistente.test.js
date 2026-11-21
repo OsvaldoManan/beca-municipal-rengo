@@ -58,6 +58,8 @@ const casos = [
   ["¿Qué es la beca?", "que-es"],
   ["habrá ceremonia de entrega", "ceremonia"],
   ["dónde descargo los formatos", "formatos"],
+  ["me pidieron reenviar un documento ilegible", "reemplazo"],
+  ["hay un resumen para imprimir", "resumen"],
   ["necesito la plantilla para imprimir", "formatos"],
   ["¿por qué piden tantos papeles?", "por-que"],
   ["para qué solicitan todo esto", "por-que"],
