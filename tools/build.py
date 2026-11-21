@@ -13,11 +13,4 @@ html = html.replace('<link rel="stylesheet" href="css/estilos.css">', "<style>\n
 html = re.sub(r'<script src="(js/[^"]+)"></script>', lambda m: "<script>\n" + (r / m.group(1)).read_text(encoding="utf8") + "</script>", html)
 (r / "dist").mkdir(exist_ok=True)
 (r / "dist/beca-municipal-rengo.html").write_text(html, encoding="utf8")
-# Fragmento sin <html>/<head>/<body>, para vista previa como artefacto
-frag = re.search(r"<title>.*?</title>", html, re.S).group(0) + "\n" + \
-    '<meta name="claude:viewport-fit-sides" content="cover">\n' + \
-    "".join(re.findall(r'<link rel="stylesheet" href="https://fonts[^>]+>\n?', html)) + \
-    re.search(r"<style>.*?</style>", html, re.S).group(0) + "\n" + \
-    re.search(r"<body>(.*)</body>", html, re.S).group(1)
-(r / "dist/vista-previa.html").write_text(frag, encoding="utf8")
 print("dist listo")

@@ -54,7 +54,6 @@ El comando requiere Python 3 y no usa bibliotecas externas. Genera dos archivos.
 | Archivo | Uso |
 | --- | --- |
 | `dist/beca-municipal-rengo.html` | Sitio completo con estilos, código y logos incrustados. Sirve para enviarlo por correo o revisarlo sin servidor |
-| `dist/vista-previa.html` | Fragmento sin las etiquetas `html`, `head` y `body`, pensado para vistas previas incrustadas |
 
 La versión de un solo archivo copia el contenido de `js/app.js` tal como está en ese momento. Si cambia `ENDPOINT`, vuelva a compilar.
 
