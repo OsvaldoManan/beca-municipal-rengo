@@ -6,6 +6,18 @@ var PLAZO_ANIO = 2027;
 // Con true, el formulario se oculta fuera del 1 al 30 de marzo. Déjelo en false mientras el sitio esté en revisión.
 var PLAZO_CERRAR_FORMULARIO = false;
 
+// Con true se muestra el banner «Sitio en construcción» con la cuenta regresiva, hasta la apertura del 1 de marzo.
+// Cámbielo a false para retirarlo antes.
+var SITIO_EN_CONSTRUCCION = true;
+
+/** Tiempo que falta entre dos instantes (milisegundos), separado en días, horas, minutos y segundos. */
+function tiempoRestante(ahora, meta) {
+  var s = Math.max(0, Math.floor((meta - ahora) / 1000));
+  return { dias: Math.floor(s / 86400), horas: Math.floor(s % 86400 / 3600), minutos: Math.floor(s % 3600 / 60), segundos: s % 60, total: s };
+}
+/** Instante de apertura: 1 de marzo a las 00:00 en Chile continental, que en esa fecha corresponde a UTC-3. */
+function aperturaPostulacion(anio) { return Date.UTC(anio, 2, 1, 3, 0, 0); }
+
 /**
  * Estado del período de postulación (artículo 9) para una fecha dada en hora de Chile.
  * hoy = {anio, mes, dia}. Devuelve {fase: "antes" | "abierto" | "cerrado", dias}.
@@ -28,6 +40,20 @@ function hoyEnChile() {
   if (typeof document === "undefined") return;
   var $ = function (id) { return document.getElementById(id); };
   var dias = function (n) { return n === 1 ? "1 día" : n + " días"; };
+
+  /* ── Sitio en construcción y cuenta regresiva ── */
+  var obra = $("obra");
+  if (obra) {
+    var meta = aperturaPostulacion(PLAZO_ANIO), reloj = null;
+    var dos = function (n) { return n < 10 ? "0" + n : String(n); };
+    var tic = function () {
+      var t = tiempoRestante(Date.now(), meta);
+      if (!SITIO_EN_CONSTRUCCION || t.total === 0) { obra.hidden = true; if (reloj) clearInterval(reloj); return; }
+      $("crDias").textContent = t.dias; $("crHoras").textContent = dos(t.horas); $("crMin").textContent = dos(t.minutos); $("crSeg").textContent = dos(t.segundos);
+    };
+    tic();
+    if (!obra.hidden) reloj = setInterval(tic, 1000);
+  }
 
   /* ── Aviso de plazo ── */
   var avisos = document.querySelectorAll("[data-plazo]");

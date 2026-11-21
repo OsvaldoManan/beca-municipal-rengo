@@ -38,6 +38,8 @@ const HOJA_PENDIENTES = 'Pendientes';
 function onOpen() {
   try {
     SpreadsheetApp.getUi().createMenu('Beca Municipal')
+      .addItem('Actualizar resumen de postulaciones', 'prepararResumen')
+      .addSeparator()
       .addItem('1. Preparar columnas de revisión', 'prepararRevision')
       .addItem('2. Generar nómina con puntajes', 'generarNomina')
       .addItem('3. Registrar resultados en la hoja', 'registrarResultados')
@@ -271,4 +273,47 @@ function prepararPublicacion() {
   h.getRange(1, 1).setValue('Copie el contenido de la celda A3 en el archivo datos/resultados.json del sitio.');
   h.getRange(3, 1).setValue(JSON.stringify(datos, null, 1));
   return datos;
+}
+
+/* ───────── resumen del proceso ───────── */
+
+/**
+ * Fórmulas de la pestaña «Resumen». Lógica pura. Devuelve filas [rótulo, fórmula].
+ * Los conteos se actualizan solos cada vez que llega una postulación.
+ */
+function armarResumen(nombrePrincipal) {
+  var p = "'" + String(nombrePrincipal).replace(/'/g, "''") + "'!", d = "'" + HOJA_DOCUMENTOS + "'!";
+  var letra = function (n) { var s = ''; while (n > 0) { s = String.fromCharCode(65 + (n - 1) % 26) + s; n = Math.floor((n - 1) / 26); } return s; };
+  var filas = [
+    ['Postulaciones recibidas', '=COUNTA(' + p + 'A2:A)'],
+    ['Primera postulación', '=IF(COUNT(' + p + 'B2:B)=0,"",MIN(' + p + 'B2:B))'],
+    ['Última postulación', '=IF(COUNT(' + p + 'B2:B)=0,"",MAX(' + p + 'B2:B))'],
+    ['Documentos recibidos en total', '=SUM(' + d + letra(5 + CLAVES.length) + '2:' + letra(5 + CLAVES.length) + ')'],
+    ['', ''], ['Documentos recibidos por tipo', '']
+  ];
+  CLAVES.forEach(function (k, i) { var c = letra(5 + i); filas.push([NOMBRES_DOCUMENTOS[k], '=COUNTIF(' + d + c + '2:' + c + ',"Sí")']); });
+  filas.push(['', ''], ['Postulaciones por tramo del Registro Social de Hogares', '']);
+  var colTramo = letra(COLUMNAS.indexOf('Tramo RSH') + 1);
+  ['40%', '50%', '60%', '70%', '80%', '90%', '100%'].forEach(function (t) { filas.push(['Tramo ' + t, '=COUNTIF(' + p + colTramo + '2:' + colTramo + ',"' + t + '")']); });
+  filas.push(['', ''], ['Revisión de admisibilidad', '']);
+  var colAdm = letra(COLUMNAS.length + 1);
+  filas.push(['Admisibles', '=COUNTIF(' + p + colAdm + '2:' + colAdm + ',"Sí")'], ['Inadmisibles', '=COUNTIF(' + p + colAdm + '2:' + colAdm + ',"No")'],
+    ['Pendientes de revisión', '=COUNTA(' + p + 'A2:A)-COUNTIF(' + p + colAdm + '2:' + colAdm + ',"Sí")-COUNTIF(' + p + colAdm + '2:' + colAdm + ',"No")']);
+  return filas;
+}
+
+/** Crea o actualiza la pestaña «Resumen» con los conteos del proceso. */
+function prepararResumen() {
+  const libro = SpreadsheetApp.openById(HOJA_ID);
+  const principal = libro.getSheets()[0];
+  if (!libro.getSheetByName(HOJA_DOCUMENTOS)) {
+    libro.insertSheet(HOJA_DOCUMENTOS).appendRow(['Folio', 'Fecha de recepción', 'Postulante', 'RUT'].concat(CLAVES.map(function (k) { return NOMBRES_DOCUMENTOS[k]; }), ['Total de documentos']));
+  }
+  var h = libro.getSheetByName('Resumen') || libro.insertSheet('Resumen');
+  h.clearContents();
+  h.getRange(1, 1).setValue('Beca Municipal Rengo ' + ANIO_PROCESO + '. Resumen de postulaciones');
+  const filas = armarResumen(principal.getName());
+  h.getRange(3, 1, filas.length, 1).setValues(filas.map(function (f) { return [f[0]]; }));
+  filas.forEach(function (f, i) { if (f[1]) h.getRange(3 + i, 2).setFormula(f[1]); });
+  return filas.length;
 }

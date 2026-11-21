@@ -56,7 +56,27 @@ const casos = [
   ["¿Puedo postular en papel?", "como-postular"],
   ["estudio en un CFT", "quienes"],
   ["¿Qué es la beca?", "que-es"],
-  ["habrá ceremonia de entrega", "ceremonia"]
+  ["habrá ceremonia de entrega", "ceremonia"],
+  ["dónde descargo los formatos", "formatos"],
+  ["necesito la plantilla para imprimir", "formatos"],
+  ["¿por qué piden tantos papeles?", "por-que"],
+  ["para qué solicitan todo esto", "por-que"],
+  ["por qué piden el registro social de hogares", "rsh"],
+  ["por qué me piden la cuenta bancaria", "cuenta"],
+  ["todavía no tengo el certificado de alumno regular", "alumno-regular"],
+  ["mi carnet está vencido", "cedula"],
+  ["por qué piden los datos de mi familia", "grupo-familiar"],
+  ["no tengo correo electrónico", "correo"],
+  ["el archivo pesa mucho y no sube", "archivos"],
+  ["puedo subir fotos del celular", "archivos"],
+  ["¿me llega un correo de confirmación?", "comprobante"],
+  ["cómo sé que recibieron mi postulación", "comprobante"],
+  ["cómo va mi postulación", "estado"],
+  ["me equivoqué en un dato, puedo corregir", "corregir"],
+  ["quién ve mis datos personales", "privacidad"],
+  ["cómo consigo la cartola", "rsh"],
+  ["cómo consigo los documentos", "conseguir"],
+  ["dónde saco la planilla de rendición", "rendicion"]
 ];
 let fallas = 0;
 for (const [pregunta, esperado] of casos) {
@@ -74,8 +94,13 @@ const ids = new Set();
 for (const x of ctx.ORDENANZA_BASE) {
   assert.ok(x.id && !ids.has(x.id), "id repetido o vacío: " + x.id); ids.add(x.id);
   assert.ok(x.t && x.a && x.k && x.r, "entrada incompleta: " + x.id);
-  assert.ok(/^(Artículo|Artículos)/.test(x.a), "falta el artículo en " + x.id);
-  if (x.e) assert.ok(x.e.length === 2 && x.e[0] && x.e[1], "enlace incompleto en " + x.id);
+  assert.ok(/^(Artículo|Artículos|Sitio|Formulario)/.test(x.a), "falta la fuente en " + x.id);
+  const enlaces = !x.e ? [] : Array.isArray(x.e[0]) ? x.e : [x.e];
+  for (const par of enlaces) {
+    assert.ok(par.length === 2 && par[0] && par[1], "enlace incompleto en " + x.id);
+    // Los archivos enlazados deben existir en el repositorio.
+    if (!par[1].startsWith("#")) assert.ok(fs.existsSync(path.join(__dirname, "..", par[1])), "no existe " + par[1]);
+  }
 }
 assert.strictEqual(fallas, 0, fallas + " pregunta(s) no llevaron a la respuesta esperada");
 console.log(casos.length + " preguntas llevan a la respuesta esperada, " + ctx.ORDENANZA_BASE.length + " respuestas en la base");

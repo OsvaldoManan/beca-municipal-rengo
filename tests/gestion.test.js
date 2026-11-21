@@ -20,6 +20,14 @@ grupo("plazo: antes, durante y después del 1 al 30 de marzo", () => {
   assert.deepStrictEqual(e(2027, 3, 31), ["cerrado", 1]);
 });
 
+grupo("cuenta regresiva hacia el 1 de marzo, hora de Chile", () => {
+  const meta = sitio.aperturaPostulacion(2027);
+  assert.strictEqual(new Date(meta).toISOString(), "2027-03-01T03:00:00.000Z");
+  const t = sitio.tiempoRestante(Date.UTC(2027, 1, 27, 1, 59, 30), meta);                // 26 de febrero, 22:59:30 en Chile
+  assert.deepStrictEqual([t.dias, t.horas, t.minutos, t.segundos], [2, 1, 0, 30]);
+  assert.strictEqual(sitio.tiempoRestante(meta + 5000, meta).total, 0);
+});
+
 // ── Servicio (Code.gs + Puntaje.gs + Panel.gs) con una hoja simulada ──
 function servicio(filas, opciones = {}) {
   const pestanas = {}, correos = [];

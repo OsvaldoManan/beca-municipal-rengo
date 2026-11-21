@@ -24,6 +24,7 @@ Para activar la recepción siga la guía [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md
 | `tools/build.py` | Genera en `dist/` una versión del sitio en un solo archivo |
 | `documentos/` | Ordenanza de la beca en PDF y formatos imprimibles (`documentos/formatos/`, generados con `node tools/formatos.js`) |
 | `datos/` | `resultados.json`, que alimenta la sección de resultados del sitio |
+| `plantillas/` | Planilla de control en Excel con las pestañas Postulaciones, Documentos y Resumen |
 | `tests/` | Pruebas automáticas |
 | `docs/` | Guías de despliegue, publicación en GitHub y protección de datos |
 | `.github/workflows/pages.yml` | Publicación automática en GitHub Pages |

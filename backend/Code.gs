@@ -73,6 +73,13 @@ const COLUMNAS_REVISION = ['Admisible', 'Motivo de inadmisibilidad', 'Residencia
 const REGISTRAR_CONSULTAS = false;
 const HOJA_CONSULTAS = 'Consultas sin respuesta';
 
+// Pestaña de control: una fila por postulación con Sí, No o No aplica para cada documento.
+const HOJA_DOCUMENTOS = 'Documentos';
+const NOMBRES_DOCUMENTOS = { cedula: 'Cédula de identidad', alumno_regular: 'Certificado de alumno regular', notas: 'Certificado de notas',
+  rsh: 'Cartola Registro Social de Hogares', residencia: 'Certificado de residencia', declaracion: 'Declaración jurada simple',
+  discapacidad: 'Credencial de discapacidad', cuidador: 'Credencial de cuidador', fud: 'Formulario Único de Derivación',
+  cedula_tutor: 'Cédula del tutor', autorizacion: 'Autorización del tutor', declaracion_tutor: 'Declaración jurada del tutor' };
+
 const MSJ_INTERNO = 'No fue posible registrar su postulación por un problema del sistema. ' +
   'Intente nuevamente en unos minutos y, si el problema continúa, escriba a ' + CORREO_BECA + '.';
 
@@ -148,6 +155,8 @@ function doPost(e) {
         adjuntos.map(function (b) { return b.getName(); }).join(', '), carpeta.getUrl(), ''].map(celda));
       SpreadsheetApp.flush();
       fila = hoja.getLastRow();
+      // Control de documentos. Si falla, la postulación ya está registrada y solo se deja constancia.
+      try { registrarDocumentos(folio, d, adjuntos); } catch (x) { console.error('Control de documentos de ' + folio + ' no registrado: ' + x); }
     } catch (err) {
       // La postulación no alcanzó a quedar en la hoja. Se retira la carpeta para no dejar un registro a medias
       // y se informa al postulante que debe enviar otra vez.
@@ -176,7 +185,9 @@ function doPost(e) {
         subject: 'Beca Municipal Rengo. Postulación recibida, folio ' + folio,
         body: 'Estimado(a) ' + d.nombres + ' ' + d.apellidos + ':\n\n' +
           'Hemos recibido su postulación a la Beca Municipal Rengo ' + ANIO_PROCESO + ' con el folio ' + folio + '.\n' +
-          'Documentos recibidos: ' + adjuntos.length + '.\n\n' +
+          'Fecha y hora de recepción: ' + Utilities.formatDate(new Date(), ZONA_HORARIA, 'dd-MM-yyyy HH:mm') + '.\n\n' +
+          'Documentos recibidos (' + adjuntos.length + '):\n' + listaDocumentos(adjuntos) + '\n\n' +
+          'Conserve este correo como respaldo de su postulación.\n\n' +
           'La revisión de admisibilidad se realiza durante abril y los resultados se publican en mayo en los ' +
           'medios oficiales del municipio. Para consultas escriba a ' + CORREO_BECA + ' indicando su folio.\n\n' +
           'Dirección de Desarrollo Comunitario\nIlustre Municipalidad de Rengo'
@@ -389,6 +400,32 @@ function rutValido(r) {
   for (var i = r.length - 2; i >= 0; i--) { s += Number(r[i]) * m; m = m === 7 ? 2 : m + 1; }
   var dv = 11 - (s % 11);
   return r.slice(-1) === (dv === 11 ? '0' : dv === 10 ? 'K' : String(dv));
+}
+
+/** Clave del documento a partir del nombre con que se guardó (por ejemplo «rsh.pdf» → «rsh»). */
+function claveDeAdjunto(b) { return String(b.getName()).replace(/\.[a-z0-9]+$/i, ''); }
+
+function listaDocumentos(adjuntos) {
+  return adjuntos.map(function (b) { var k = claveDeAdjunto(b); return '  - ' + (NOMBRES_DOCUMENTOS[k] || k); }).join('\n');
+}
+
+/** Agrega a la pestaña «Documentos» una fila con el estado de cada documento de la postulación. */
+function registrarDocumentos(folio, d, adjuntos) {
+  var libro = SpreadsheetApp.openById(HOJA_ID);
+  var h = libro.getSheetByName(HOJA_DOCUMENTOS) || libro.insertSheet(HOJA_DOCUMENTOS);
+  if (h.getLastRow() === 0) {
+    h.appendRow(['Folio', 'Fecha de recepción', 'Postulante', 'RUT'].concat(CLAVES.map(function (k) { return NOMBRES_DOCUMENTOS[k]; }), ['Total de documentos']));
+  }
+  var recibidos = {};
+  adjuntos.forEach(function (b) { recibidos[claveDeAdjunto(b)] = true; });
+  var exigidos = {};
+  OBLIGATORIOS.forEach(function (k) { exigidos[k] = true; });
+  if (d.credDiscapacidad || d.credDiscapacidadFamiliar) exigidos.discapacidad = true;
+  if (d.credCuidador) exigidos.cuidador = true;
+  if (d.programaFamilias) exigidos.fud = true;
+  if (d.menor) DE_MENOR.forEach(function (k) { exigidos[k] = true; });
+  h.appendRow([folio, new Date(), d.apellidos + ', ' + d.nombres, d.rut].concat(
+    CLAVES.map(function (k) { return recibidos[k] ? 'Sí' : exigidos[k] ? 'No' : 'No aplica'; }), [adjuntos.length]).map(celda));
 }
 
 /**

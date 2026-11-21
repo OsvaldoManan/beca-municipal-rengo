@@ -16,7 +16,7 @@
     if (!REGISTRAR_CONSULTAS || typeof ENDPOINT === "undefined" || !ENDPOINT || typeof fetch !== "function") return;
     try { fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ tipo: "consulta", texto: String(texto).slice(0, 200) }) }).catch(function () {}); } catch (x) {}
   }
-  var SUGERIDAS = ["fechas", "documentos", "monto", "puntaje", "gastos", "rendicion"];
+  var SUGERIDAS = ["fechas", "documentos", "formatos", "por-que", "puntaje", "rendicion"];
 
   var boton = crear("button", "asis-boton", "Consultas sobre la ordenanza");
   boton.type = "button"; boton.setAttribute("aria-expanded", "false"); boton.setAttribute("aria-controls", "asistente");
@@ -59,13 +59,14 @@
       return;
     }
     var m = decir(entrada.r, "asis-bot");
-    m.append(crear("span", "asis-fuente", "Fuente: " + entrada.a.charAt(0).toLowerCase() + entrada.a.slice(1) + " de la ordenanza"));
-    if (entrada.e) {
-      var enlace = crear("a", "", entrada.e[0]); enlace.href = entrada.e[1];
-      if (entrada.e[1].charAt(0) === "#") enlace.addEventListener("click", cerrarPanel);
+    m.append(crear("span", "asis-fuente", /^Sitio$/.test(entrada.a) ? "Información sobre el funcionamiento de este sitio" : "Fuente: " + entrada.a.replace(/^Sitio y /, "").replace(/^./, function (c) { return c.toLowerCase(); }) + " de la ordenanza"));
+    var enlaces = !entrada.e ? [] : Array.isArray(entrada.e[0]) ? entrada.e : [entrada.e];
+    enlaces.forEach(function (par) {
+      var enlace = crear("a", "", par[0]); enlace.href = par[1];
+      if (par[1].charAt(0) === "#") enlace.addEventListener("click", cerrarPanel);
       else { enlace.target = "_blank"; enlace.rel = "noopener"; }
       m.append(enlace);
-    }
+    });
     if (relacionadas && relacionadas.length) registro.append(sugerencias(relacionadas));
   }
   function porId(id) { for (var i = 0; i < ORDENANZA_BASE.length; i++) if (ORDENANZA_BASE[i].id === id) return ORDENANZA_BASE[i]; }
@@ -82,7 +83,7 @@
   function abrir() {
     panel.hidden = false; boton.setAttribute("aria-expanded", "true"); boton.hidden = true;
     if (!registro.childNodes.length) {
-      decir("Puedo responder consultas sobre requisitos, fechas, documentos, puntaje, uso de la beca y rendición, siempre según la ordenanza. No reemplazo la orientación de DIDECO ni resuelvo casos particulares." + (REGISTRAR_CONSULTAS ? " Las consultas que no pueda responder se registran, sin identificarle, para mejorar este servicio. No escriba datos personales." : ""), "asis-bot");
+      decir("Puedo responder consultas sobre requisitos, fechas, documentos y por qué se piden, formatos para descargar, puntaje, uso de la beca y rendición, siempre según la ordenanza. No reemplazo la orientación de DIDECO ni resuelvo casos particulares." + (REGISTRAR_CONSULTAS ? " Las consultas que no pueda responder se registran, sin identificarle, para mejorar este servicio. No escriba datos personales." : ""), "asis-bot");
       registro.append(sugerencias(SUGERIDAS.map(porId)));
     }
     campo.focus();

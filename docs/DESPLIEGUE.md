@@ -209,3 +209,18 @@ En ambos casos, cada cambio en `ENDPOINT` requiere subir el archivo `js/app.js` 
 - [ ] Retirar los permisos de acceso que ya no sean necesarios.
 - [ ] Aplicar la política de conservación y eliminación que defina el municipio.
 - [ ] Antes del proceso siguiente, crear una carpeta y una hoja nuevas, actualizar `CARPETA_ID`, `HOJA_ID` y `ANIO_PROCESO` y publicar una nueva versión.
+
+## Dónde queda la información
+
+| Qué | Dónde vive | Quién la ve |
+| --- | --- | --- |
+| Páginas del sitio, formatos y ordenanza | Repositorio y servidor web (GitHub Pages o servidor municipal) | Público |
+| Datos de cada postulación | Hoja de cálculo «Postulaciones Beca Municipal Rengo», pestaña principal | Solo quienes tengan acceso a la hoja |
+| Control de documentos | Misma hoja, pestaña «Documentos». Una fila por postulación con Sí, No o No aplica en cada documento | Igual |
+| Conteos del proceso | Misma hoja, pestaña «Resumen». Postulaciones recibidas, documentos por tipo, tramos y avance de la revisión, con fórmulas que se actualizan solas | Igual |
+| Archivos adjuntos | Carpeta de Drive «Documentos de postulantes», con una subcarpeta por folio | Solo quienes tengan acceso a la carpeta |
+| Correo de respaldo | Lo envía el servicio al postulante con folio, fecha y lista de documentos. Una copia llega a becaestudiantil@munirengo.cl | Postulante y casilla de la beca |
+
+Nada de lo que escribe el postulante se guarda en el repositorio ni en el servidor web. El sitio solo transporta la postulación hasta el servicio de Apps Script, que la deja en la hoja y en la carpeta.
+
+La plantilla `plantillas/postulaciones-beca-municipal-rengo.xlsx` contiene las tres pestañas con sus encabezados y fórmulas. Se puede subir a Drive y abrir como Hoja de cálculo de Google, o usar como respaldo en Excel. La función `prepararResumen` de `Panel.gs` vuelve a crear la pestaña «Resumen» si se borra.

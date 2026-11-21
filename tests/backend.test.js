@@ -24,10 +24,14 @@ function entorno(opc = {}) {
       setValue: x => { m.filas[r - 1][c - 1] = x; }
     })
   };
+  m.pestanas = {};
+  const pestana = datos => ({ getLastRow: () => datos.length, appendRow: f => datos.push(f.slice()) });
   const ctx = {
     console: { error: (...a) => m.logs.push(a.join(" ")), log() {} },
     LockService: { getScriptLock: () => ({ tryLock: () => { if (opc.ocupado) return false; m.candados++; return true; }, releaseLock: () => { m.liberados++; } }) },
-    SpreadsheetApp: { openById: () => ({ getSheets: () => [hoja] }), flush() {} },
+    SpreadsheetApp: { openById: () => ({ getSheets: () => [hoja],
+      getSheetByName: n => m.pestanas[n] ? pestana(m.pestanas[n]) : null,
+      insertSheet: n => { m.pestanas[n] = []; return pestana(m.pestanas[n]); } }), flush() {} },
     DriveApp: { getFolderById: () => ({ createFolder: nombre => {
       const c = { nombre, archivos: [], papelera: false, getName: () => c.nombre, setName: n => { c.nombre = n; }, setTrashed: t => { c.papelera = t; },
         getUrl: () => "https://drive.example/" + m.carpetas.length, createFile: b => { c.archivos.push(b.getName()); } };
@@ -199,4 +203,16 @@ caso("doGet entrega un estado breve sin datos", () => {
   assert.deepStrictEqual(Object.keys(j).sort(), ["configurado", "controlDePlazo", "enPlazo", "ok", "proceso", "servicio"]);
 });
 
+caso("control de documentos: una fila por postulación con Sí, No aplica y el total, y comprobante con la lista", () => {
+  const m = entorno(), r = m.post(postulacion());
+  assert.strictEqual(r.ok, true);
+  const d = m.pestanas["Documentos"];
+  assert.strictEqual(d.length, 2);
+  assert.deepStrictEqual(Array.from(d[0].slice(0, 5)), ["Folio", "Fecha de recepción", "Postulante", "RUT", "Cédula de identidad"]);
+  assert.strictEqual(d[1][0], "BMR-2027-0001");
+  assert.deepStrictEqual(Array.from(d[1].slice(4, 10)), ["Sí", "Sí", "Sí", "Sí", "Sí", "Sí"]);          // los seis obligatorios
+  assert.ok(d[1].slice(10, 16).every(x => x === "No aplica"));
+  assert.strictEqual(d[1][16], 6);
+  assert.match(m.correos[0].body, /Documentos recibidos \(6\):[\s\S]*Cartola Registro Social de Hogares[\s\S]*Conserve este correo/);
+});
 console.log("\n" + n + " grupos de pruebas correctos");
