@@ -110,3 +110,17 @@ Muestra los mismos conteos del sitio sin ocultar grupos pequeños, la revisión 
 - Área de la carrera. Las diez áreas del conocimiento que usa el Servicio de Información de Educación Superior del Mineduc.
 
 Las listas viven en `Code.gs` (`SECTORES`, `TIPOS_INSTITUCION`, `AREAS_CARRERA`) y en `index.html`. Deben coincidir, y `tests/backend.test.js` lo verifica.
+
+## Revisión automática de documentos (prototipo, desactivada)
+
+`Revision.gs` lee el texto de los documentos de cada postulación con el OCR de Google Drive y deja en la pestaña «Revisión automática» una fila por postulación. Comprueba que cada documento tenga texto, que aparezca el RUT del postulante, que el tramo de la cartola y el promedio coincidan con lo declarado, que el certificado de alumno regular sea del año y de la institución declarada y que el certificado de residencia mencione Rengo.
+
+No decide la admisibilidad, que sigue a cargo de los profesionales de DIDECO (artículo 12). Un «No» o «No se pudo leer» es una alerta para revisar a mano. No comprueba firmas ni autenticidad. Los documentos no salen de Google, porque el texto se obtiene con una copia temporal en Google Docs que se borra de inmediato.
+
+Prueba del 26 de noviembre de 2026 con seis documentos ficticios. Todos se leyeron, entre 5 y 16 segundos cada uno. Con los datos correctos las 11 comprobaciones dieron «Sí», y con datos distintos detectó las cinco diferencias. Un archivo de 3,5 MB también se leyó. Limitación conocida: la institución se da por encontrada si su nombre coincide con una ciudad que aparece en el documento.
+
+Para activarla, con el visto bueno de DIDECO:
+
+1. En el editor de Apps Script, Servicios (+) > Drive API, versión v3, identificador `Drive`.
+2. Cambie `REVISION_AUTOMATICA` a `true` y guarde.
+3. Ejecute `instalarRevisionAutomatica()` una vez. Desde entonces revisa las postulaciones nuevas cada 15 minutos, unas seis por ejecución.
