@@ -1,40 +1,54 @@
 // Complementos del sitio: aviso de plazo, lista de verificación, accesibilidad, estado por folio y resultados.
 // Cada bloque funciona solo si su marcado existe en la página, de modo que quitar una sección no rompe el resto.
 
-// Año del proceso que se muestra en los avisos. Debe coincidir con ANIO_PROCESO de backend/Code.gs.
+// Año del proceso que se muestra en los avisos y en el folio. Debe coincidir con ANIO_PROCESO de backend/Code.gs.
 var PLAZO_ANIO = 2027;
-// Con true, el formulario se oculta fuera del 1 al 30 de marzo (artículo 9). Debe ir junto con CONTROLAR_PLAZO en backend/Code.gs.
+// Período de postulación, en fechas de Chile con la forma AAAA-MM-DD, ambos días incluidos.
+// El artículo 9 de la ordenanza fija del 1 al 30 de marzo. Para el proceso 2027 la municipalidad abrió un
+// período extraordinario. Deben coincidir con PLAZO_INICIO y PLAZO_FIN de backend/Code.gs.
+var PLAZO_INICIO = "2026-11-26";
+var PLAZO_FIN = "2027-01-01";
+// Con true, el formulario se oculta fuera del período. Debe ir junto con CONTROLAR_PLAZO en backend/Code.gs.
 var PLAZO_CERRAR_FORMULARIO = true;
 
-// Con true se muestra el aviso «Próxima apertura» con la cuenta regresiva, hasta la apertura del 1 de marzo.
+// Con true se muestra el aviso «Próxima apertura» con la cuenta regresiva, hasta el día de PLAZO_INICIO.
 // Cámbielo a false para retirarlo antes.
-var SITIO_EN_CONSTRUCCION = true;
+var SITIO_EN_CONSTRUCCION = false;
+
+var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+/** "2027-01-01" se escribe «1 de enero de 2027», o «1 de enero» si conAnio es false. */
+function fechaLarga(iso, conAnio) {
+  var p = String(iso).split("-");
+  return (+p[2]) + " de " + MESES[+p[1] - 1] + (conAnio === false ? "" : " de " + p[0]);
+}
 
 /** Tiempo que falta entre dos instantes (milisegundos), separado en días, horas, minutos y segundos. */
 function tiempoRestante(ahora, meta) {
   var s = Math.max(0, Math.floor((meta - ahora) / 1000));
   return { dias: Math.floor(s / 86400), horas: Math.floor(s % 86400 / 3600), minutos: Math.floor(s % 3600 / 60), segundos: s % 60, total: s };
 }
-/** Instante de apertura: 1 de marzo a las 00:00 en Chile continental, que en esa fecha corresponde a UTC-3. */
-function aperturaPostulacion(anio) { return Date.UTC(anio, 2, 1, 3, 0, 0); }
+/** Instante de apertura: las 00:00 del día de inicio en Chile continental, que en horario de verano corresponde a UTC-3. */
+function aperturaPostulacion(inicio) { var p = String(inicio).split("-"); return Date.UTC(+p[0], +p[1] - 1, +p[2], 3, 0, 0); }
+
+/** Número de día de una fecha "AAAA-MM-DD", para restar fechas sin depender de la zona horaria. */
+function numeroDia(iso) { var p = String(iso).split("-"); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000); }
 
 /**
- * Estado del período de postulación (artículo 9) para una fecha dada en hora de Chile.
- * hoy = {anio, mes, dia}. Devuelve {fase: "antes" | "abierto" | "cerrado", dias}.
+ * Estado del período de postulación para una fecha dada en hora de Chile.
+ * hoy = {anio, mes, dia}; inicio y fin = "AAAA-MM-DD". Devuelve {fase: "antes" | "abierto" | "cerrado", dias}.
  */
-function estadoPlazo(hoy, anio) {
-  var dia = function (a, m, d) { return Math.round(Date.UTC(a, m - 1, d) / 86400000); };
-  var h = dia(hoy.anio, hoy.mes, hoy.dia), abre = dia(anio, 3, 1), cierra = dia(anio, 3, 30);
+function estadoPlazo(hoy, inicio, fin) {
+  var h = Math.round(Date.UTC(hoy.anio, hoy.mes - 1, hoy.dia) / 86400000), abre = numeroDia(inicio), cierra = numeroDia(fin);
   if (h < abre) return { fase: "antes", dias: abre - h };
   if (h <= cierra) return { fase: "abierto", dias: cierra - h };
   return { fase: "cerrado", dias: h - cierra };
 }
-/** Días del 1 al 30 de marzo con su cantidad de postulaciones. porDia = {"2027-03-05": 4, ...}. */
-function serieMarzo(porDia, anio) {
+/** Cada día del período con su cantidad de postulaciones. porDia = {"2026-12-05": 4, ...}. */
+function seriePeriodo(porDia, inicio, fin) {
   var dias = [];
-  for (var d = 1; d <= 30; d++) {
-    var k = anio + "-03-" + (d < 10 ? "0" + d : d);
-    dias.push({ dia: d, n: (porDia && porDia[k]) || 0 });
+  for (var d = numeroDia(inicio); d <= numeroDia(fin); d++) {
+    var k = new Date(d * 86400000).toISOString().slice(0, 10);
+    dias.push({ fecha: k, rotulo: fechaLarga(k, false), n: (porDia && porDia[k]) || 0 });
   }
   return dias;
 }
@@ -58,15 +72,15 @@ function pintarCifras(j) {
     var val = document.createElement("span"); val.className = "cif-val"; val.textContent = mil(n);
     li.append(rot, pista, val); tramos.append(li);
   });
-  // Columnas por día de marzo y su tabla equivalente.
-  var serie = serieMarzo(j.porDia, j.proceso), maxD = Math.max.apply(null, serie.map(function (x) { return x.n; }).concat([1]));
+  // Columnas por día del período y su tabla equivalente.
+  var serie = seriePeriodo(j.porDia, PLAZO_INICIO, PLAZO_FIN), maxD = Math.max.apply(null, serie.map(function (x) { return x.n; }).concat([1]));
   var cols = $("cifDias"), tabla = $("cifTabla"); cols.textContent = ""; tabla.textContent = "";
   serie.forEach(function (x) {
     var c = document.createElement("span"); c.className = "cif-col" + (x.n ? "" : " vacia");
     c.style.height = (x.n ? Math.max(4, x.n / maxD * 100) : 0) + "%";
-    c.dataset.tip = x.dia + " de marzo: " + x.n; cols.append(c);
+    c.dataset.tip = x.rotulo + ": " + x.n; cols.append(c);
     var tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td");
-    a.textContent = x.dia + " de marzo"; b.textContent = mil(x.n); tr.append(a, b); tabla.append(tr);
+    a.textContent = x.rotulo; b.textContent = mil(x.n); tr.append(a, b); tabla.append(tr);
   });
 }
 
@@ -85,7 +99,7 @@ function hoyEnChile() {
   /* ── Sitio en construcción y cuenta regresiva ── */
   var obra = $("obra");
   if (obra) {
-    var meta = aperturaPostulacion(PLAZO_ANIO), reloj = null;
+    var meta = aperturaPostulacion(PLAZO_INICIO), reloj = null;
     var dos = function (n) { return n < 10 ? "0" + n : String(n); };
     var tic = function () {
       var t = tiempoRestante(Date.now(), meta);
@@ -113,17 +127,17 @@ function hoyEnChile() {
   /* ── Aviso de plazo ── */
   var avisos = document.querySelectorAll("[data-plazo]");
   if (avisos.length) {
-    var e = estadoPlazo(hoyEnChile(), PLAZO_ANIO), texto;
-    if (e.fase === "antes") texto = "La postulación " + PLAZO_ANIO + " abre el 1 de marzo. Faltan " + dias(e.dias) + ".";
-    else if (e.fase === "abierto") texto = e.dias === 0 ? "Hoy es el último día para postular." : "Postulación abierta. Quedan " + dias(e.dias) + " para el cierre del 30 de marzo.";
-    else texto = "La postulación " + PLAZO_ANIO + " cerró el 30 de marzo.";
+    var e = estadoPlazo(hoyEnChile(), PLAZO_INICIO, PLAZO_FIN), texto;
+    if (e.fase === "antes") texto = "La postulación " + PLAZO_ANIO + " abre el " + fechaLarga(PLAZO_INICIO) + ". Faltan " + dias(e.dias) + ".";
+    else if (e.fase === "abierto") texto = e.dias === 0 ? "Hoy es el último día para postular." : "Postulación abierta hasta el " + fechaLarga(PLAZO_FIN) + ". Quedan " + dias(e.dias) + " para el cierre.";
+    else texto = "La postulación " + PLAZO_ANIO + " cerró el " + fechaLarga(PLAZO_FIN) + ".";
     var cerrado = PLAZO_CERRAR_FORMULARIO && e.fase !== "abierto";
     if (cerrado) texto += e.fase === "antes" ? " El formulario estará disponible desde ese día." : " El formulario ya no recibe postulaciones.";
     avisos.forEach(function (a) { a.textContent = texto; a.hidden = false; a.dataset.fase = e.fase; });
     var zona = document.querySelector(".zona");
     if (cerrado && zona) zona.hidden = true;
 
-    /* Aviso por correo para la apertura: solo antes del 1 de marzo y con la recepción conectada */
+    /* Aviso por correo para la apertura: solo antes del inicio del período y con la recepción conectada */
     var avisoForm = $("avisoForm");
     var conServicio = typeof ENDPOINT !== "undefined" && !!ENDPOINT;
     if (avisoForm && e.fase === "antes" && conServicio) {
@@ -138,7 +152,7 @@ function hoyEnChile() {
         fetch(ENDPOINT, { method: "POST", body: JSON.stringify({ tipo: "recordatorio", correo: correo }) })
           .then(function (r) { return r.json(); })
           .then(function (j) {
-            if (j && j.ok) { decirAviso("exito", j.repetido ? "Ese correo ya estaba registrado. Le escribiremos el 1 de marzo." : "Listo. Le escribiremos a " + correo + " el 1 de marzo."); avisoForm.reset(); }
+            if (j && j.ok) { decirAviso("exito", j.repetido ? "Ese correo ya estaba registrado. Le escribiremos el " + fechaLarga(PLAZO_INICIO, false) + "." : "Listo. Le escribiremos a " + correo + " el " + fechaLarga(PLAZO_INICIO, false) + "."); avisoForm.reset(); }
             else decirAviso("error", (j && j.error) || "No fue posible registrar su correo. Intente nuevamente.");
           })
           .catch(function () { decirAviso("error", "No fue posible conectarse. Revise su conexión e intente nuevamente."); })
@@ -153,7 +167,7 @@ function hoyEnChile() {
       cifras.hidden = false;
       var nota = $("cifNota");
       if (e.fase === "antes") {
-        nota.textContent = "Las cifras se publican aquí desde el 1 de marzo, cuando abre la postulación.";
+        nota.textContent = "Las cifras se publican aquí desde el " + fechaLarga(PLAZO_INICIO, false) + ", cuando abre la postulación.";
       } else {
         nota.textContent = "Cargando cifras…";
         fetch(ENDPOINT + "?cifras=1").then(function (r) { return r.json(); }).then(function (j) {
