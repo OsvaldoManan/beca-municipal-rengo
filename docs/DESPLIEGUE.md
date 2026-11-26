@@ -106,17 +106,17 @@ Al terminar, elimine las filas de prueba de la hoja (conserve la fila de encabez
 
 ### A8. Activar el control de plazo
 
-El artículo 9 de la ordenanza fija el período de postulación entre el 1 y el 30 de marzo de cada año. Antes del 1 de marzo realice lo siguiente.
+El artículo 9 de la ordenanza fija el período de postulación entre el 1 y el 30 de marzo de cada año. Para el proceso 2027 la municipalidad abrió un período extraordinario, del 26 de noviembre de 2026 al 1 de enero de 2027. El período se define con `PLAZO_INICIO` y `PLAZO_FIN`, que deben tener las mismas fechas en `backend/Code.gs` y en `js/complementos.js`. Antes de la apertura realice lo siguiente.
 
-1. Confirme que `ANIO_PROCESO` corresponde al año en curso.
+1. Confirme que `ANIO_PROCESO`, `PLAZO_INICIO` y `PLAZO_FIN` tienen los valores del proceso.
 2. Cambie `CONTROLAR_PLAZO` a `true` y guarde.
 3. Publique el cambio como se indica en A9.
 
-Con el control activado, el servicio rechaza todo envío realizado fuera del 1 al 30 de marzo del año indicado. Las pruebas de la sección A7 dejan de funcionar fuera de ese período.
+Con el control activado, el servicio rechaza todo envío realizado fuera del período, ambos días incluidos. Las pruebas de la sección A7 dejan de funcionar fuera de ese período.
 
-El control usa la fecha según la zona horaria del proyecto. Revísela en **Configuración del proyecto** y ajústela a la hora de Chile continental para que el cierre ocurra a la medianoche local del 30 de marzo.
+El control usa la fecha según la zona horaria del proyecto. Revísela en **Configuración del proyecto** y ajústela a la hora de Chile continental para que el cierre ocurra a la medianoche local del día de `PLAZO_FIN`.
 
-El formulario del sitio no bloquea por fecha. Fuera de plazo la persona puede llenarlo, pero al enviar recibe el mensaje de rechazo del servicio.
+Con `PLAZO_CERRAR_FORMULARIO` en `true`, el sitio oculta el formulario fuera del período. Si se desactiva, la persona puede llenarlo, pero al enviar recibe el mensaje de rechazo del servicio.
 
 ### A9. Publicar cambios posteriores en el código
 
@@ -178,7 +178,7 @@ En ambos casos, cada cambio en `ENDPOINT` requiere subir el archivo `js/app.js` 
 
 ## Parte C. Listas de verificación
 
-### Antes de abrir las postulaciones (1 de marzo)
+### Antes de abrir las postulaciones (día de `PLAZO_INICIO`)
 
 - [ ] El contenido del sitio fue revisado por DIDECO contra la ordenanza vigente.
 - [ ] La carpeta, la hoja y el proyecto de Apps Script pertenecen a una cuenta institucional.
@@ -194,13 +194,13 @@ En ambos casos, cada cambio en `ENDPOINT` requiere subir el archivo `js/app.js` 
 - [ ] El sitio fue probado en un teléfono y en un computador.
 - [ ] Existe una persona de contacto de informática durante el período.
 
-### Durante el período (1 al 30 de marzo)
+### Durante el período
 
 - [ ] Revisar periódicamente la sección **Ejecuciones** de Apps Script en busca de errores.
 - [ ] Comprobar que el número de filas de la hoja coincide con el de subcarpetas y con el de correos recibidos.
 - [ ] No ordenar, filtrar con eliminación ni borrar filas de la hoja.
 
-### Después del cierre (desde el 31 de marzo)
+### Después del cierre (desde el día siguiente a `PLAZO_FIN`)
 
 - [ ] Confirmar que el servicio rechaza los envíos nuevos.
 - [ ] Retirar o desactivar el formulario del sitio, o informar en la página que el período terminó.
