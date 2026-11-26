@@ -34,8 +34,12 @@ const CARPETA_ID = 'PEGAR_ID_DE_LA_CARPETA';
 const HOJA_ID = 'PEGAR_ID_DE_LA_HOJA';
 const CORREO_BECA = 'becaestudiantil@munirengo.cl';
 const ANIO_PROCESO = 2027;
-// Plazo del artículo 9. Con CONTROLAR_PLAZO en true se rechazan envíos fuera del 1 al 30 de marzo
-// de ANIO_PROCESO, según la hora de Chile continental.
+// Período de postulación, en fechas de Chile con la forma AAAA-MM-DD, ambos días incluidos.
+// El artículo 9 de la ordenanza fija del 1 al 30 de marzo. Para el proceso 2027 la municipalidad abrió un
+// período extraordinario. Deben coincidir con PLAZO_INICIO y PLAZO_FIN de js/complementos.js.
+const PLAZO_INICIO = '2026-11-26';
+const PLAZO_FIN = '2027-01-01';
+// Con CONTROLAR_PLAZO en true se rechazan envíos fuera del período, según la hora de Chile continental.
 const CONTROLAR_PLAZO = true;
 const ZONA_HORARIA = 'America/Santiago';
 
@@ -85,8 +89,8 @@ const COLUMNAS_SUBSANACION = ['Folio', 'Documento', 'Observación', 'Enviar avis
 // Pestaña de control: una fila por postulación con Sí, No o No aplica para cada documento.
 const HOJA_DOCUMENTOS = 'Documentos';
 
-// Aviso de apertura. Quien deja su correo en el sitio antes del 1 de marzo recibe un correo cuando abre la postulación.
-// El envío lo hace enviarRecordatorios(), que se ejecuta a mano desde el editor el 1 de marzo (ver docs/PANEL-INTERNO.md).
+// Aviso de apertura. Quien deja su correo en el sitio antes de PLAZO_INICIO recibe un correo cuando abre la postulación.
+// El envío lo hace enviarRecordatorios(), que se ejecuta a mano desde el editor ese día (ver docs/PANEL-INTERNO.md).
 const RECORDATORIOS_ACTIVOS = true;
 const HOJA_RECORDATORIOS = 'Recordatorios';
 const URL_PORTAL = 'https://osvaldomanan.github.io/beca-municipal-rengo/';
@@ -137,7 +141,7 @@ function doPost(e) {
     }
 
     if (CONTROLAR_PLAZO && !enPlazo(new Date())) {
-      return rechazar('El período de postulación es del 1 al 30 de marzo de ' + ANIO_PROCESO + '.');
+      return rechazar('El período de postulación es del ' + fechaLarga(PLAZO_INICIO) + ' al ' + fechaLarga(PLAZO_FIN) + '.');
     }
 
     // 1. Validación completa antes de tocar Drive o la hoja. Los errores de Rechazo se muestran al postulante.
@@ -411,10 +415,17 @@ function nombreCarpeta(x) {
 
 function siNo(x) { return x ? 'Sí' : 'No'; }
 
-/** Verdadero entre el 1 y el 30 de marzo de ANIO_PROCESO, hora de Chile (artículo 9). */
+/** Verdadero entre PLAZO_INICIO y PLAZO_FIN, ambos incluidos, según la fecha en hora de Chile. */
 function enPlazo(fecha) {
-  var p = Utilities.formatDate(fecha, ZONA_HORARIA, 'yyyy-M-d').split('-');
-  return Number(p[0]) === ANIO_PROCESO && Number(p[1]) === 3 && Number(p[2]) >= 1 && Number(p[2]) <= 30;
+  var hoy = Utilities.formatDate(fecha, ZONA_HORARIA, 'yyyy-MM-dd');
+  return hoy >= PLAZO_INICIO && hoy <= PLAZO_FIN;
+}
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** '2027-01-01' se escribe «1 de enero de 2027». */
+function fechaLarga(iso) {
+  var p = String(iso).split('-');
+  return Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1] + ' de ' + p[0];
 }
 
 function rutLimpio(r) { return String(r === null || r === undefined ? '' : r).replace(/[.\s-]/g, '').toUpperCase(); }
@@ -581,7 +592,7 @@ function registrarRecordatorio(correo) {
  * restantes pendientes y basta con ejecutarla otra vez al día siguiente.
  */
 function enviarRecordatorios() {
-  if (!enPlazo(new Date())) return 'La postulación no está abierta. Los avisos se envían desde el 1 de marzo de ' + ANIO_PROCESO + '.';
+  if (!enPlazo(new Date())) return 'La postulación no está abierta. Los avisos se envían desde el ' + fechaLarga(PLAZO_INICIO) + '.';
   var h = SpreadsheetApp.openById(HOJA_ID).getSheetByName(HOJA_RECORDATORIOS);
   if (!h || h.getLastRow() < 2) return 'No hay correos registrados.';
   var filas = h.getRange(2, 1, h.getLastRow() - 1, 3).getValues();
@@ -595,7 +606,7 @@ function enviarRecordatorios() {
         to: correo,
         subject: 'Abrió la postulación a la Beca Municipal Rengo ' + ANIO_PROCESO,
         body: 'Le escribimos porque pidió un aviso en el sitio de la Beca Municipal Rengo.\n\n' +
-          'La postulación en línea está abierta del 1 al 30 de marzo de ' + ANIO_PROCESO + '. Puede postular en ' + URL_PORTAL + '\n\n' +
+          'La postulación en línea está abierta del ' + fechaLarga(PLAZO_INICIO) + ' al ' + fechaLarga(PLAZO_FIN) + '. Puede postular en ' + URL_PORTAL + '\n\n' +
           'Antes de comenzar, reúna sus documentos en PDF, JPG o PNG, de hasta 5 MB cada uno. ' +
           'Si tiene dudas, escriba a ' + CORREO_BECA + '.\n\n' +
           'Ilustre Municipalidad de Rengo\nDirección de Desarrollo Comunitario',
