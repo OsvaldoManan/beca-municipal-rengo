@@ -78,7 +78,7 @@ La primera verifica la validación del RUT. La segunda ejecuta el servicio de re
 1. La persona completa el formulario en su navegador y adjunta los documentos. Se aceptan archivos PDF, JPG o PNG de hasta 5 MB cada uno.
 2. `js/app.js` valida los datos antes de enviar. Revisa los campos obligatorios, el dígito verificador del RUT, el formato del correo, el promedio mínimo según el año que se cursa, los documentos exigidos según cada caso y las declaraciones finales.
 3. Si `ENDPOINT` tiene una dirección, el navegador convierte cada archivo a base64 y envía una única solicitud `POST` con un cuerpo JSON de tres partes, `datos`, `familia` y `archivos`.
-4. La aplicación web de Google Apps Script (`backend/Code.gs`) recibe la solicitud y vuelve a validar. Comprueba los datos mínimos, el RUT, la presencia de los documentos obligatorios, el tipo y tamaño de cada archivo y que no exista otra postulación con el mismo RUT. Si `CONTROLAR_PLAZO` está activado, rechaza los envíos fuera del período del 1 al 30 de marzo.
+4. La aplicación web de Google Apps Script (`backend/Code.gs`) recibe la solicitud y vuelve a validar. Comprueba los datos mínimos, el RUT, la presencia de los documentos obligatorios, el tipo y tamaño de cada archivo y que no exista otra postulación con el mismo RUT. Si `CONTROLAR_PLAZO` está activado, rechaza los envíos fuera del período definido por `PLAZO_INICIO` y `PLAZO_FIN`. La ordenanza fija del 1 al 30 de marzo. Para el proceso 2027 la municipalidad abrió un período extraordinario, del 26 de noviembre de 2026 al 1 de enero de 2027.
 5. El servicio asigna un folio con el formato `BMR-AÑO-0001`, crea en Google Drive una carpeta para la persona postulante y guarda allí sus documentos.
 6. El servicio agrega una fila a la hoja de cálculo con los datos de la postulación y el enlace a la carpeta.
 7. El servicio envía un comprobante al correo de la persona postulante y una copia con los documentos adjuntos a `becaestudiantil@munirengo.cl`, la casilla prevista en el artículo 12 de la ordenanza.
@@ -118,7 +118,7 @@ El sitio incluye una ventana de consultas sobre la ordenanza (`js/asistente.js`)
 
 | Complemento | Qué hace | Ajuste |
 | --- | --- | --- |
-| Aviso de plazo | Muestra los días que faltan para la apertura o el cierre del 1 al 30 de marzo | `PLAZO_ANIO` y `PLAZO_CERRAR_FORMULARIO` en `js/complementos.js` |
+| Aviso de plazo | Muestra los días que faltan para la apertura o el cierre del período | `PLAZO_ANIO`, `PLAZO_INICIO`, `PLAZO_FIN` y `PLAZO_CERRAR_FORMULARIO` en `js/complementos.js` |
 | Lista de verificación | El postulante confirma que reunió requisitos y documentos antes del formulario | Marcado en `index.html`, bloque `#verifica` |
 | Accesibilidad | Tamaño de letra y alto contraste, recordados en el navegador | Barra superior |
 | Estado por folio | Consulta la etapa de una postulación con folio y RUT. Requiere `ENDPOINT` | Lee las columnas «Admisible» y «Resultado» de la hoja |
