@@ -15,7 +15,7 @@ const CORREO_BECA = "becaestudiantil@munirengo.cl";
 // Borrador local. Solo se guardan estos campos. Nunca la cuenta bancaria, el grupo familiar,
 // las declaraciones ni los archivos.
 const CLAVE_BORRADOR = "becaRengo.borrador.v1";
-const BORRADOR_TEXTO = ["nombres","apellidos","rut","telefono","domicilio","correo","tutorNombre","tutorRut","institucion","carrera","anio","promedio","tramo"];
+const BORRADOR_TEXTO = ["nombres","apellidos","rut","telefono","domicilio","sector","fechaNacimiento","correo","tutorNombre","tutorRut","institucion","tipoInstitucion","carrera","areaCarrera","anio","promedio","tramo"];
 const BORRADOR_CHECKS = ["menor","cDisc","cDiscFam","cCuid","cFam"];
 const BORRADOR_DIAS = 7;
 
@@ -251,6 +251,18 @@ function limpiarError(campo){
   c.classList.remove("err");
   c.querySelectorAll(".msj").forEach(m=>{ if(m.dataset.gen) m.remove(); });
 }
+// Edad cumplida en la fecha hoy. Ambas con la forma AAAA-MM-DD. Misma regla que edadEn de backend/Code.gs.
+function edadEn(nac, hoy){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(nac)), h=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(hoy));
+  if(!m||!h) return null;
+  const a=+m[1], me=+m[2], di=+m[3], f=new Date(Date.UTC(a,me-1,di));
+  if(f.getUTCFullYear()!==a||f.getUTCMonth()!==me-1||f.getUTCDate()!==di||String(nac)>String(hoy)) return null;
+  let e=+h[1]-a; if(+h[2]<me||(+h[2]===me&&+h[3]<di)) e--; return e;
+}
+function hoyIso(){
+  try { return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santiago",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); }
+  catch(x){ return new Date().toISOString().slice(0,10); }
+}
 function validar(){
   document.querySelectorAll("#f [aria-invalid]").forEach(limpiarError);
   const faltas=[];
@@ -267,6 +279,12 @@ function validar(){
     }
     else if(c.type==="email"){ if(!correoValido(t)) falla(c,"Escriba un correo válido, por ejemplo nombre@correo.cl."); }
     else if(c.type==="tel"){ if(!telefonoValido(t)) falla(c,"Escriba un teléfono válido, por ejemplo +56 9 1234 5678."); }
+    else if(c.id==="fechaNacimiento"){
+      const e=edadEn(t, hoyIso());
+      if(e===null || e<14 || e>90) falla(c,"Revise la fecha de nacimiento.");
+      else if(e<18 && !v("menor")) falla(c,"Según esta fecha tiene menos de 18 años. Marque la casilla de menor de edad y agregue los datos de su tutor.");
+      else if(e>=18 && v("menor")) falla(c,"Marcó que tiene menos de 18 años, pero esta fecha indica 18 o más. Revise la fecha o la casilla.");
+    }
     else if(c.id==="promedio"){
       const n=aNota(t), anio=val("anio"), min=notaMinima(anio);
       if(!(n>=1&&n<=7)) falla(c,"El promedio debe estar entre 1,0 y 7,0.");
@@ -343,7 +361,7 @@ const aBase64 = f => new Promise((ok,no)=>{ const r=new FileReader(); r.onload=(
 
 async function armarCarga(){
   const datos = {};
-  ["nombres","apellidos","rut","telefono","domicilio","correo","tutorNombre","tutorRut","titular","banco","tipoCuenta","numCuenta","institucion","carrera","anio","promedio","tramo"].forEach(k=>datos[k]=val(k));
+  ["nombres","apellidos","rut","telefono","domicilio","sector","fechaNacimiento","correo","tutorNombre","tutorRut","titular","banco","tipoCuenta","numCuenta","institucion","tipoInstitucion","carrera","areaCarrera","anio","promedio","tramo"].forEach(k=>datos[k]=val(k));
   datos.rut = rutFormato(datos.rut);
   datos.promedio = datos.promedio.replace(",",".");
   datos.menor=v("menor");

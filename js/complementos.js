@@ -53,28 +53,41 @@ function seriePeriodo(porDia, inicio, fin) {
   return dias;
 }
 
-/** Dibuja las cifras públicas: total, barras por tramo, columnas por día y la tabla equivalente. */
+/** Dibuja las cifras públicas: total, barras por cada lista, columnas por día y la tabla equivalente. */
 function pintarCifras(j) {
   var $ = function (id) { return document.getElementById(id); };
   var mil = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "."); };
   $("cifCuerpo").hidden = false;
   $("cifTotal").textContent = mil(j.total);
-  // Barras por tramo: una sola serie, un solo color, con el valor escrito junto a cada barra.
-  var tramos = $("cifTramos"); tramos.textContent = "";
-  var claves = Object.keys(j.porTramo || {});
-  var maxT = Math.max.apply(null, claves.map(function (k) { return j.porTramo[k]; }).concat([1]));
-  claves.forEach(function (k) {
-    var n = j.porTramo[k], li = document.createElement("li");
-    var rot = document.createElement("span"); rot.className = "cif-rot"; rot.textContent = "Tramo " + k;
-    var pista = document.createElement("span"); pista.className = "cif-pista";
-    var barra = document.createElement("span"); barra.className = "cif-barra"; barra.style.width = (n / maxT * 100) + "%";
-    pista.append(barra);
-    var val = document.createElement("span"); val.className = "cif-val"; val.textContent = mil(n);
-    li.append(rot, pista, val); tramos.append(li);
-  });
+  var umbral = j.umbral || 5;
+  // Barras: una sola serie, un solo color, con el valor escrito junto a cada barra.
+  // Un valor null es un grupo de menos de «umbral» personas. Se escribe así y su barra queda sin largo.
+  var barras = function (id, conteos, rotulo) {
+    var lista = $(id); if (!lista) return;
+    lista.textContent = "";
+    var claves = Object.keys(conteos || {});
+    lista.closest("figure").hidden = !claves.length;
+    var maxT = Math.max.apply(null, claves.map(function (k) { return conteos[k] || 0; }).concat([1]));
+    claves.forEach(function (k) {
+      var n = conteos[k], li = document.createElement("li");
+      var rot = document.createElement("span"); rot.className = "cif-rot"; rot.textContent = rotulo ? rotulo(k) : k;
+      var pista = document.createElement("span"); pista.className = "cif-pista";
+      var barra = document.createElement("span"); barra.className = "cif-barra" + (n === null ? " oculta" : "");
+      barra.style.width = (n === null ? 0 : n / maxT * 100) + "%";
+      pista.append(barra);
+      var val = document.createElement("span"); val.className = "cif-val"; val.textContent = n === null ? "menos de " + umbral : mil(n);
+      li.append(rot, pista, val); lista.append(li);
+    });
+  };
+  barras("cifTramos", j.porTramo, function (k) { return "Tramo " + k; });
+  barras("cifSectores", j.porSector);
+  barras("cifTipos", j.porTipoInstitucion);
+  barras("cifAreas", j.porArea);
+  barras("cifEdades", j.porEdad);
   // Columnas por día del período y su tabla equivalente.
   var serie = seriePeriodo(j.porDia, PLAZO_INICIO, PLAZO_FIN), maxD = Math.max.apply(null, serie.map(function (x) { return x.n; }).concat([1]));
   var cols = $("cifDias"), tabla = $("cifTabla"); cols.textContent = ""; tabla.textContent = "";
+  cols.style.gridTemplateColumns = "repeat(" + serie.length + ",minmax(0,1fr))";
   serie.forEach(function (x) {
     var c = document.createElement("span"); c.className = "cif-col" + (x.n ? "" : " vacia");
     c.style.height = (x.n ? Math.max(4, x.n / maxD * 100) : 0) + "%";
@@ -82,6 +95,12 @@ function pintarCifras(j) {
     var tr = document.createElement("tr"), a = document.createElement("td"), b = document.createElement("td");
     a.textContent = x.rotulo; b.textContent = mil(x.n); tr.append(a, b); tabla.append(tr);
   });
+  var eje = $("cifEje");
+  if (eje && serie.length) {
+    var corto = function (x) { var p = x.rotulo.split(" de "); return p[0] + " " + p[1].slice(0, 3); };
+    var e = eje.querySelectorAll("span");
+    e[0].textContent = corto(serie[0]); e[1].textContent = corto(serie[Math.floor((serie.length - 1) / 2)]); e[2].textContent = corto(serie[serie.length - 1]);
+  }
 }
 
 function hoyEnChile() {
