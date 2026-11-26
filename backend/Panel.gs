@@ -125,7 +125,7 @@ function armarNomina(filas, cupos) {
     var p = {
       folio: txt(f[col('Folio')]), nombre: (txt(f[col('Nombres')]) + ' ' + txt(f[col('Apellidos')])).trim(),
       rut: txt(f[col('RUT')]), correo: txt(f[col('Correo')]),
-      anio: Number(f[col('Año que cursa')]), promedio: f[col('Promedio')], tramo: txt(f[col('Tramo RSH')]),
+      anio: Number(f[col('Año que cursa')]), promedio: f[col('Promedio')], tramo: tramoComoTexto(f[col('Tramo RSH')]),
       discapacidad: si(f[col('Credencial discapacidad')]), discapacidadFamiliar: si(f[col('Credencial discapacidad familiar')]),
       cuidador: si(f[col('Credencial cuidador')]), familias: si(f[col('Programa Familias')]),
       rural: si(f[col('Residencia rural')])
@@ -298,7 +298,8 @@ function armarResumen(nombrePrincipal) {
   CLAVES.forEach(function (k, i) { var c = letra(5 + i); filas.push([NOMBRES_DOCUMENTOS[k], '=COUNTIF(' + d + c + '2:' + c + ',"Sí")']); });
   filas.push(['', ''], ['Postulaciones por tramo del Registro Social de Hogares', '']);
   var colTramo = letra(COLUMNAS.indexOf('Tramo RSH') + 1);
-  ['40%', '50%', '60%', '70%', '80%', '90%', '100%'].forEach(function (t) { filas.push(['Tramo ' + t, '=COUNTIF(' + p + colTramo + '2:' + colTramo + ',"' + t + '")']); });
+  // TO_TEXT cuenta igual el texto «40%» y el número 0,4 con formato de porcentaje.
+  ['40%', '50%', '60%', '70%', '80%', '90%', '100%'].forEach(function (t) { filas.push(['Tramo ' + t, '=SUMPRODUCT(TO_TEXT(' + p + colTramo + '2:' + colTramo + ')="' + t + '")']); });
   // Conteos por unidad vecinal, tipo de institución, área y rango de edad. A diferencia del sitio, aquí no se ocultan grupos pequeños.
   var porLista = function (titulo, nombreCol, lista) {
     var c = letra(COLUMNAS.indexOf(nombreCol) + 1);
@@ -431,7 +432,7 @@ function armarInforme(filas, r, cupos, anio) {
     pares.forEach(function (x) { o.push([x[0], x[1], pct(x[1], den)]); });
     o.push(['', '', '']);
   };
-  bloque('2. Postulaciones por tramo del Registro Social de Hogares', contar(registradas, function (f) { return String(f[col('Tramo RSH')]).trim(); })
+  bloque('2. Postulaciones por tramo del Registro Social de Hogares', contar(registradas, function (f) { return tramoComoTexto(f[col('Tramo RSH')]); })
     .sort(function (a, b) { return parseInt(a[0], 10) - parseInt(b[0], 10); }), total);
   bloque('3. Becas asignadas por tramo', contar(sel, function (p) { return p.tramo; }).sort(function (a, b) { return parseInt(a[0], 10) - parseInt(b[0], 10); }), sel.length);
   bloque('4. Postulaciones por institución', contar(registradas, function (f) { return String(f[col('Institución')]).trim(); }), total);

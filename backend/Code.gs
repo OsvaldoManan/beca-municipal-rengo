@@ -202,7 +202,7 @@ function doPost(e) {
       hoja.appendRow([folio, new Date(), d.nombres, d.apellidos, d.rut, d.telefono, d.domicilio, d.correo,
         "'" + d.fechaNacimiento, d.sector,
         siNo(d.menor), d.tutorNombre, d.tutorRut, d.titular, d.banco, d.tipoCuenta, "'" + d.numCuenta,
-        d.institucion, d.tipoInstitucion, d.carrera, d.areaCarrera, Number(d.anio), d.promedio, d.gastos.join(', '), d.tramo,
+        d.institucion, d.tipoInstitucion, d.carrera, d.areaCarrera, Number(d.anio), d.promedio, d.gastos.join(', '), "'" + d.tramo,
         siNo(d.credDiscapacidad), siNo(d.credDiscapacidadFamiliar), siNo(d.credCuidador), siNo(d.programaFamilias),
         familia.map(function (f) { return f.join(' | '); }).join('\n'),
         adjuntos.map(function (b) { return b.getName(); }).join(', '), carpeta.getUrl(), ''].map(celda));
@@ -673,7 +673,7 @@ function cifrasProceso() {
       if (!/^BMR-/.test(String(f[0]))) return;
       total++;
       if (f[1] instanceof Date) { var dia = Utilities.formatDate(f[1], ZONA_HORARIA, 'yyyy-MM-dd'); porDia[dia] = (porDia[dia] || 0) + 1; }
-      sumar(c.porTramo, String(f[col('Tramo RSH')]));
+      sumar(c.porTramo, tramoComoTexto(f[col('Tramo RSH')]));
       sumar(c.porSector, String(f[col('Sector')]));
       sumar(c.porTipoInstitucion, String(f[col('Tipo de institución')]));
       sumar(c.porArea, String(f[col('Área de la carrera')]));
@@ -687,6 +687,18 @@ function cifrasProceso() {
     actualizado: Utilities.formatDate(new Date(), ZONA_HORARIA, 'dd-MM-yyyy HH:mm') };
   Object.keys(c).forEach(function (k) { salida[k] = resguardar(c[k]); });
   return salida;
+}
+
+/**
+ * Tramo del Registro Social de Hogares como texto «40%». Google Sheets convierte «40%» en el número 0,4,
+ * por lo que se aceptan ambas formas. Las filas nuevas se guardan como texto.
+ */
+function tramoComoTexto(x) {
+  var s = String(x === null || x === undefined ? '' : x).replace(/^'/, '').trim();
+  var n = Number(s.replace('%', '').replace(',', '.'));
+  if (s === '' || isNaN(n)) return s;
+  if (n > 0 && n <= 1) n = Math.round(n * 100);
+  return n + '%';
 }
 
 /** Reemplaza por null los conteos de 1 a UMBRAL_CIFRAS - 1. El 0 se mantiene. */
