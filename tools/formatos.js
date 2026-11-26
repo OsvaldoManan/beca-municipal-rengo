@@ -74,7 +74,7 @@ const resumen = base("BECA MUNICIPAL RENGO 2027", `<style>
     .caja b{display:block;font-size:13pt}.caja span{font-size:8.5pt;text-transform:uppercase;letter-spacing:.05em}header{margin-bottom:10pt}footer{display:none}.pie{font-size:8.5pt;text-align:center;margin-top:8pt}
     td,th{font-size:9.5pt;padding:2.5pt 5pt;height:auto}</style>
     <p style="text-align:center">Aporte de la Ilustre Municipalidad de Rengo para estudiantes de la comuna en educación superior</p>
-    <div class="caja"><div><b>$400.000</b><span>Monto, en una cuota</span></div><div><b>1 al 30 de marzo</b><span>Postulación</span></div><div><b>Mayo</b><span>Resultados y pago</span></div><div><b>30 de noviembre</b><span>Plazo para rendir</span></div></div>
+    <div class="caja"><div><b>$400.000</b><span>Monto, en una cuota</span></div><div><b>26 nov. al 1 ene.</b><span>Postulación</span></div><div><b>Mayo</b><span>Resultados y pago</span></div><div><b>30 de noviembre</b><span>Plazo para rendir</span></div></div>
     <div class="dos"><div>
     <h2>Quiénes pueden postular</h2><ul>
       <li>Estudiantes que viven en Rengo y cursan una carrera en una universidad, instituto profesional o centro de formación técnica acreditado.</li>
@@ -97,7 +97,7 @@ const resumen = base("BECA MUNICIPAL RENGO 2027", `<style>
     <p>Las becas se asignan de mayor a menor puntaje, según los recursos del presupuesto municipal.</p>
     </div></div>
     <h2>Cómo postular</h2>
-    <p>La postulación es solo en línea, del 1 al 30 de marzo. No se reciben documentos en papel. Si no cuenta con computador o internet, la Oficina de Organizaciones Comunitarias de DIDECO dispone de un espacio y un profesional de apoyo. Consultas a <b>becaestudiantil@munirengo.cl</b>.</p>
+    <p>La postulación es solo en línea, del 26 de noviembre de 2026 al 1 de enero de 2027, en un período extraordinario abierto por la municipalidad. La ordenanza fija del 1 al 30 de marzo. No se reciben documentos en papel. Si no cuenta con computador o internet, la Oficina de Organizaciones Comunitarias de DIDECO dispone de un espacio y un profesional de apoyo. Consultas a <b>becaestudiantil@munirengo.cl</b>.</p>
     <p><b>Rendición.</b> Quien recibe la beca debe rendir sus gastos con boletas originales en la Oficina de Partes, a más tardar el 30 de noviembre. No rendir impide acceder a beneficios municipales por dos años.</p>
     <p class="pie">Ordenanza de Postulación y Entrega de la Beca Municipal Rengo, Decreto Alcaldicio N° 340 de 26 de febrero de 2026</p>`);
 
