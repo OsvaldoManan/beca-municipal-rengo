@@ -414,6 +414,8 @@
         <div class="campo"><label for="rut">RUT</label><input type="text" id="rut" required placeholder="12.345.678-9" data-rut></div>
         <div class="campo"><label for="telefono">Teléfono</label><input type="tel" id="telefono" required placeholder="+56 9 1234 5678" autocomplete="tel"></div>
         <div class="campo ancho"><label for="domicilio">Domicilio en Rengo</label><input type="text" id="domicilio" required autocomplete="street-address" placeholder="Calle, número, villa o sector"></div>
+        <div class="campo"><label for="sector">Unidad vecinal donde vive</label><select id="sector" required><option value="">Seleccione</option><optgroup label="Urbanas"><option value="Valle del Claro Sur">Valle del Claro Sur</option><option value="Villa Deseada">Villa Deseada</option><option value="Arturo Pratt">Arturo Pratt</option><option value="La Isla">La Isla (incluye Los Migueles urbano)</option><option value="Juan Egenau">Juan Egenau</option><option value="La Central">La Central</option><option value="Carlos Condell">Carlos Condell</option><option value="Capitán Benigno Román">Capitán Benigno Román</option><option value="Rosario Urbano">Rosario Urbano</option></optgroup><optgroup label="Rurales"><option value="Villa del Cobil">Villa del Cobil</option><option value="Rio Claro - Lo Cartagena">Rio Claro - Lo Cartagena</option><option value="Rinconada de Malambo">Rinconada de Malambo</option><option value="La Chimba">La Chimba</option><option value="La Progresista">La Progresista</option><option value="El Cerrillo">El Cerrillo</option><option value="Lo de Lobos">Lo de Lobos (incluye Los Migueles rural y El Llano)</option><option value="Apalta">Apalta (incluye El Retiro y Choapinos)</option><option value="Pueblo Hundido - Los Gomeros">Pueblo Hundido - Los Gomeros</option><option value="Campo Lindo">Campo Lindo (incluye El Delirio, Esmeralda, Villa La Unión, San Jorge, Naicura y Santa Isabel)</option><option value="Camarico - Las Pataguas">Camarico - Las Pataguas</option><option value="Chanqueahue">Chanqueahue</option></optgroup><option value="No sé a qué unidad vecinal pertenezco">No sé a qué unidad vecinal pertenezco</option></select><span class="ayuda">Si no la conoce, puede preguntar en su junta de vecinos.</span></div>
+        <div class="campo"><label for="fechaNacimiento">Fecha de nacimiento</label><input type="date" id="fechaNacimiento" required min="1930-01-01" autocomplete="bday"></div>
         <div class="campo ancho"><label for="correo">Correo electrónico personal</label><input type="email" id="correo" required autocomplete="email"><span class="ayuda">A este correo llegarán el comprobante y los resultados.</span></div>
       </div>
       <div class="checks"><label><input type="checkbox" id="menor"> Tengo menos de 18 años y postulo con autorización de mi padre, madre o tutor.</label></div>
@@ -437,7 +439,9 @@
       <legend><small>Paso 3</small>Sus estudios</legend>
       <div class="campos">
         <div class="campo ancho"><label for="institucion">Institución donde estudia</label><input type="text" id="institucion" required></div>
+        <div class="campo"><label for="tipoInstitucion">Tipo de institución</label><select id="tipoInstitucion" required><option value="">Seleccione</option><option>Universidad</option><option>Instituto profesional</option><option>Centro de formación técnica</option></select></div>
         <div class="campo"><label for="carrera">Carrera</label><input type="text" id="carrera" required></div>
+        <div class="campo"><label for="areaCarrera">Área de la carrera</label><select id="areaCarrera" required><option value="">Seleccione</option><option>Administración y comercio</option><option>Agropecuaria</option><option>Arte y arquitectura</option><option>Ciencias básicas</option><option>Ciencias sociales</option><option>Derecho</option><option>Educación</option><option>Humanidades</option><option>Salud</option><option>Tecnología</option></select><span class="ayuda">Elija la que más se acerque a su carrera.</span></div>
         <div class="campo"><label for="anio">Año que cursa en 2027</label><select id="anio" required><option value="">Seleccione</option><option value="1">Primer año</option><option value="2">Segundo año</option><option value="3">Tercer año</option><option value="4">Cuarto año</option><option value="5">Quinto año o superior</option></select></div>
         <div class="campo"><label for="promedio" id="promLabel">Promedio de notas</label><input type="number" id="promedio" required min="1" max="7" step="0.1" inputmode="decimal"><span class="ayuda" id="promAyuda">Escala de 1,0 a 7,0.</span></div>
       </div>
@@ -514,10 +518,27 @@
         <figcaption>Por tramo del Registro Social de Hogares</figcaption>
         <ol class="cif-barras" id="cifTramos"></ol>
       </figure>
+      <figure class="cif-fig">
+        <figcaption>Por unidad vecinal donde viven</figcaption>
+        <ol class="cif-barras" id="cifSectores"></ol>
+      </figure>
+      <figure class="cif-fig">
+        <figcaption>Por tipo de institución</figcaption>
+        <ol class="cif-barras" id="cifTipos"></ol>
+      </figure>
+      <figure class="cif-fig">
+        <figcaption>Por área de la carrera</figcaption>
+        <ol class="cif-barras" id="cifAreas"></ol>
+      </figure>
+      <figure class="cif-fig">
+        <figcaption>Por edad</figcaption>
+        <ol class="cif-barras" id="cifEdades"></ol>
+      </figure>
+      <p class="cifras-nota" id="cifResguardo">Para proteger a las personas, los grupos de menos de 5 postulaciones se muestran como «menos de 5». Cada cifra se presenta por separado, sin cruces.</p>
       <figure class="cif-fig cif-dias">
         <figcaption>Recibidas cada día del período</figcaption>
         <div class="cif-columnas" id="cifDias" aria-hidden="true"></div>
-        <div class="cif-eje" aria-hidden="true"><span>1 mar</span><span>15 mar</span><span>30 mar</span></div>
+        <div class="cif-eje" id="cifEje" aria-hidden="true"><span>26 nov</span><span>14 dic</span><span>1 ene</span></div>
       </figure>
       <details class="plegable cif-tabla">
         <summary>Ver las cifras por día como tabla</summary>
