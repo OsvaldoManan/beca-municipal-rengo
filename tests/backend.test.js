@@ -57,12 +57,16 @@ function entorno(opc = {}) {
   return m;
 }
 // Postulación válida con datos ficticios. "cambios" permite alterar datos y archivos.
+const lista = nombre => JSON.parse(new RegExp("const " + nombre + " = (\\[[^\\]]*\\]);").exec(CODIGO_REAL)[1].replace(/'/g, '"').replace(/\s+/g, " "));
+const SECTOR = lista("SECTORES")[0];
+// Valor de una columna de la hoja simulada, buscada por su encabezado.
+const celdaDe = (m, i, nombre) => m.filas[i][m.filas[0].indexOf(nombre)];
 function postulacion(cambios = {}, claves = OBLIGATORIOS) {
   return {
     datos: Object.assign({ nombres: "Postulante de Prueba", apellidos: "Ficticio Ejemplo", rut: "11.111.111-1", telefono: "+56 9 0000 0000",
       domicilio: "Calle Falsa 123, Rengo", correo: "prueba@example.com", tutorNombre: "", tutorRut: "", titular: "Postulante", banco: "Banco de Prueba",
       tipoCuenta: "Cuenta vista", numCuenta: "000123456", institucion: "Universidad de Prueba", carrera: "Carrera Ficticia", anio: "2", promedio: "5.5",
-      tramo: "40%", menor: false, credDiscapacidad: false, credDiscapacidadFamiliar: false, credCuidador: false, programaFamilias: false,
+      tramo: "40%", fechaNacimiento: "2005-05-10", sector: SECTOR, tipoInstitucion: "Universidad", areaCarrera: "Salud", menor: false, credDiscapacidad: false, credDiscapacidadFamiliar: false, credCuidador: false, programaFamilias: false,
       gastos: ["Matrícula o arancel", "Traslados"] }, cambios),
     familia: [["Persona Uno", "22.222.222-2", "Madre", "50", "Comerciante"]],
     archivos: claves.map((k, i) => i % 2 ? { clave: k, nombre: k + ".png", tipo: "image/png", contenido: PNG } : { clave: k, nombre: k + ".pdf", tipo: "application/pdf", contenido: PDF })
@@ -86,8 +90,8 @@ caso("postulación válida: folio, carpeta, archivos, fila y dos correos", () =>
   const f = m.filas[1];
   assert.strictEqual(f[0], "BMR-2027-0001"); assert.strictEqual(f[4], "11111111-1");
   assert.strictEqual(f[5], "'+56 9 0000 0000", "el teléfono con + se guarda como texto");
-  assert.strictEqual(f[14], "'000123456", "la cuenta conserva los ceros iniciales");
-  assert.strictEqual(f[18], 5.5); assert.strictEqual(f[19], "Matrícula o arancel, Traslados");
+  assert.strictEqual(celdaDe(m, 1, "N° de cuenta"), "'000123456", "la cuenta conserva los ceros iniciales");
+  assert.strictEqual(celdaDe(m, 1, "Promedio"), 5.5); assert.strictEqual(celdaDe(m, 1, "Gastos a cubrir"), "Matrícula o arancel, Traslados");
   assert.strictEqual(m.carpetas[0].nombre, "BMR-2027-0001 Ficticio Ejemplo Postulante de Prueba");
   assert.deepStrictEqual(m.carpetas[0].archivos, ["cedula.pdf", "alumno_regular.png", "notas.pdf", "rsh.png", "residencia.pdf", "declaracion.png"]);
   assert.deepStrictEqual(m.correos.map(c => c.to), ["prueba@example.com", "becaestudiantil@munirengo.cl"]);
@@ -126,7 +130,7 @@ caso("documentos: obligatorios, condicionales, claves, tipos, tamaños y conteni
   rechazo(m, postulacion({ credDiscapacidadFamiliar: true }), /Faltan documentos obligatorios/);
   rechazo(m, postulacion({ credCuidador: true }), /Faltan documentos obligatorios/);
   rechazo(m, postulacion({ programaFamilias: true }), /Faltan documentos obligatorios/);
-  rechazo(m, postulacion({ menor: true, tutorNombre: "Tutor de Prueba", tutorRut: "22.222.222-2" }), /Faltan documentos obligatorios/);
+  rechazo(m, postulacion({ menor: true, fechaNacimiento: "2010-01-01", tutorNombre: "Tutor de Prueba", tutorRut: "22.222.222-2" }), /Faltan documentos obligatorios/);
   rechazo(m, postulacion({}, OBLIGATORIOS.concat("fud")), /no corresponde a lo declarado/);
   rechazo(m, postulacion({}, OBLIGATORIOS.concat("otro")), /no corresponde a la postulación/);
   rechazo(m, postulacion({}, OBLIGATORIOS.concat("cedula")), /repetido/);
@@ -140,9 +144,9 @@ caso("documentos: obligatorios, condicionales, claves, tipos, tamaños y conteni
   rechazo(m, { datos: postulacion().datos }, /Faltan los documentos/);
   assert.strictEqual(m.filas.length, 0); assert.strictEqual(m.carpetas.length, 0);
   const todo = OBLIGATORIOS.concat("discapacidad", "cuidador", "fud", "cedula_tutor", "autorizacion", "declaracion_tutor");
-  const r = m.post(postulacion({ credDiscapacidad: true, credCuidador: true, programaFamilias: true, menor: true, tutorNombre: "Tutor de Prueba", tutorRut: "22.222.222-2" }, todo));
+  const r = m.post(postulacion({ credDiscapacidad: true, credCuidador: true, programaFamilias: true, menor: true, fechaNacimiento: "2010-01-01", tutorNombre: "Tutor de Prueba", tutorRut: "22.222.222-2" }, todo));
   assert.strictEqual(r.ok, true); assert.strictEqual(m.carpetas[0].archivos.length, 12);
-  assert.strictEqual(m.filas[1][10], "22222222-2");
+  assert.strictEqual(celdaDe(m, 1, "RUT tutor"), "22222222-2");
 });
 caso("tope total de 25 MB", () => {
   const m = entorno(), p = postulacion();
@@ -152,9 +156,9 @@ caso("tope total de 25 MB", () => {
 });
 caso("menor de edad: exige tutor con RUT válido y distinto", () => {
   const m = entorno(), claves = OBLIGATORIOS.concat("cedula_tutor", "autorizacion", "declaracion_tutor");
-  rechazo(m, postulacion({ menor: true }, claves), /nombre del padre, madre o tutor/);
-  rechazo(m, postulacion({ menor: true, tutorNombre: "Tutor", tutorRut: "1-1" }, claves), /RUT del tutor no es válido/);
-  rechazo(m, postulacion({ menor: true, tutorNombre: "Tutor", tutorRut: "11111111-1" }, claves), /no puede ser el mismo/);
+  rechazo(m, postulacion({ menor: true, fechaNacimiento: "2010-01-01" }, claves), /nombre del padre, madre o tutor/);
+  rechazo(m, postulacion({ menor: true, fechaNacimiento: "2010-01-01", tutorNombre: "Tutor", tutorRut: "1-1" }, claves), /RUT del tutor no es válido/);
+  rechazo(m, postulacion({ menor: true, fechaNacimiento: "2010-01-01", tutorNombre: "Tutor", tutorRut: "11111111-1" }, claves), /no puede ser el mismo/);
 });
 caso("inyección de fórmulas y nombre de carpeta", () => {
   const m = entorno();
@@ -162,12 +166,12 @@ caso("inyección de fórmulas y nombre de carpeta", () => {
   assert.strictEqual(r.ok, true);
   const f = m.filas[1];
   f.forEach((x, i) => { if (typeof x === "string") assert.ok(!/^[=+\-@]/.test(x), "la columna " + (i + 1) + " podría interpretarse como fórmula: " + x); });
-  assert.strictEqual(f[2], "'=HYPERLINK(\"http://x\",\"y\")"); assert.strictEqual(f[15], "Línea 1 Línea 2 =2+2");
+  assert.strictEqual(f[2], "'=HYPERLINK(\"http://x\",\"y\")"); assert.strictEqual(celdaDe(m, 1, "Institución"), "Línea 1 Línea 2 =2+2");
   assert.ok(!/[\\\/:*?"<>|]/.test(m.carpetas[0].nombre), m.carpetas[0].nombre);
   m.correos.forEach(c => assert.ok(!/[\r\n]/.test(c.subject), "el asunto no debe contener saltos de línea"));
   // Grupo familiar con fórmula en la primera celda.
   const p = postulacion({ rut: "22.222.222-2" }); p.familia = [["=1+1", "", "", "", ""], ["", "", "", "", ""]];
-  m.post(p); assert.strictEqual(m.filas[2][25], "'=1+1 |  |  |  | ");
+  m.post(p); assert.strictEqual(celdaDe(m, 2, "Grupo familiar"), "'=1+1 |  |  |  | ");
 });
 caso("falla al escribir la hoja: no queda registro a medias, se avisa y se anota en el registro de errores", () => {
   const m = entorno({ fallaHoja: true }), r = m.post(postulacion());
@@ -182,7 +186,7 @@ caso("falla al escribir la hoja: no queda registro a medias, se avisa y se anota
 caso("falla del correo: la postulación queda registrada y se informa sin afirmar que se envió el comprobante", () => {
   const m = entorno({ fallaCorreo: true }), r = m.post(postulacion());
   assert.deepStrictEqual(r, { ok: true, folio: "BMR-2027-0001", comprobante: false });
-  assert.strictEqual(m.filas.length, 2); assert.match(m.filas[1][28], /No se envió el comprobante.*No se envió la copia/);
+  assert.strictEqual(m.filas.length, 2); assert.match(celdaDe(m, 1, "Observaciones"), /No se envió el comprobante.*No se envió la copia/);
   assert.strictEqual(m.logs.length, 2);
 });
 caso("candado ocupado: se pide reintentar y no se registra nada", () => {
@@ -247,13 +251,45 @@ caso("aviso de apertura: guarda el correo una vez y lo envía solo dentro del pl
   sinCuota.post({ tipo: "recordatorio", correo: "otra@example.com" }); sinCuota.ctx.enPlazo = () => true;
   assert.match(sinCuota.ctx.enviarRecordatorios(), /enviados: 0\. Pendientes: 1/, "respeta la reserva de cuota");
 });
-caso("cifras públicas: solo totales, sin datos personales", () => {
+caso("cifras públicas: solo totales, sin datos personales y con grupos pequeños ocultos", () => {
   const m = entorno();
-  m.post(postulacion()); m.post(postulacion({ rut: "22.222.222-2", tramo: "60%" }));
+  const ruts = ["11.111.111-1", "22.222.222-2", "33.333.333-3", "44.444.444-4", "55.555.555-5", "66.666.666-6"];
+  ruts.forEach((rut, i) => { const r = m.post(postulacion({ rut, tramo: i < 5 ? "40%" : "60%", areaCarrera: i < 5 ? "Salud" : "Derecho", fechaNacimiento: i < 5 ? "2005-05-10" : "1990-01-01" })); assert.strictEqual(r.ok, true, r.error); });
   const j = JSON.parse(m.ctx.doGet({ parameter: { cifras: "1" } }).texto);
-  assert.strictEqual(j.ok, true); assert.strictEqual(j.total, 2);
-  assert.strictEqual(j.porTramo["40%"], 1); assert.strictEqual(j.porTramo["60%"], 1);
-  assert.strictEqual(Object.values(j.porDia).reduce((a, b) => a + b, 0), 2);
-  assert.ok(!/11\.111|Postulante de Prueba|example\.com/.test(JSON.stringify(j)), "no expone datos personales");
+  assert.strictEqual(j.ok, true); assert.strictEqual(j.total, 6); assert.strictEqual(j.umbral, 5);
+  assert.strictEqual(j.porTramo["40%"], 5); assert.strictEqual(j.porTramo["60%"], null, "un grupo de 1 persona se oculta"); assert.strictEqual(j.porTramo["70%"], 0);
+  assert.strictEqual(j.porArea.Salud, 5); assert.strictEqual(j.porArea.Derecho, null);
+  assert.strictEqual(j.porSector[SECTOR], 6); assert.strictEqual(j.porTipoInstitucion.Universidad, 6);
+  assert.strictEqual(j.porEdad["20 a 24 años"] + (j.porEdad["18 y 19 años"] || 0) + (j.porEdad["17 años o menos"] || 0), 5);
+  assert.strictEqual(j.porEdad["30 años o más"], null);
+  assert.strictEqual(Object.values(j.porDia).reduce((a, b) => a + b, 0), 6);
+  assert.ok(!/11\.111|Postulante de Prueba|example\.com|2005-05-10|1990/.test(JSON.stringify(j)), "no expone datos personales ni fechas de nacimiento");
+});
+caso("campos nuevos: listas cerradas, fecha de nacimiento y coherencia con la casilla de menor", () => {
+  const m = entorno();
+  rechazo(m, postulacion({ sector: "Otro lugar" }), /unidad vecinal/);
+  rechazo(m, postulacion({ tipoInstitucion: "Liceo" }), /tipo de institución/);
+  rechazo(m, postulacion({ areaCarrera: "Otra" }), /área de la carrera/);
+  rechazo(m, postulacion({ fechaNacimiento: "2005-02-30" }), /fecha de nacimiento/);
+  rechazo(m, postulacion({ fechaNacimiento: "" }), /Falta la fecha de nacimiento/);
+  rechazo(m, postulacion({ fechaNacimiento: "2015-01-01" }), /fecha de nacimiento|menos de 18/);
+  rechazo(m, postulacion({ menor: true, tutorNombre: "Tutor de Prueba", tutorRut: "22.222.222-2" }), /indica 18 o más/);
+  assert.strictEqual(m.ctx.edadEn("2008-11-27", "2026-11-26"), 17); assert.strictEqual(m.ctx.edadEn("2008-11-26", "2026-11-26"), 18);
+  assert.strictEqual(m.ctx.rangoEdad(19), "18 y 19 años"); assert.strictEqual(m.ctx.rangoEdad(30), "30 años o más");
+  const r = m.post(postulacion());
+  assert.strictEqual(r.ok, true, r.error);
+  const C = m.filas[0], f = m.filas[1];
+  assert.strictEqual(f[C.indexOf("Sector")], SECTOR); assert.strictEqual(f[C.indexOf("Tipo de institución")], "Universidad");
+  assert.strictEqual(f[C.indexOf("Área de la carrera")], "Salud"); assert.strictEqual(String(f[C.indexOf("Fecha de nacimiento")]).replace(/^'/, ""), "2005-05-10");
+  assert.strictEqual(f[C.indexOf("Tramo RSH")], "40%");
+});
+caso("las listas del formulario coinciden con las del servicio", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const opciones = id => [...new RegExp('<select id="' + id + '"[^>]*>([\\s\\S]*?)</select>').exec(html)[1].matchAll(/<option(?: value="([^"]*)")?>([^<]*)<\/option>/g)]
+    .map(x => x[1] !== undefined ? x[1] : x[2]).filter(Boolean);
+  assert.deepStrictEqual(opciones("sector"), lista("SECTORES"));
+  assert.deepStrictEqual(opciones("tipoInstitucion"), lista("TIPOS_INSTITUCION"));
+  assert.deepStrictEqual(opciones("areaCarrera"), lista("AREAS_CARRERA"));
+  assert.ok(lista("SECTORES").length > 0, "falta la lista de sectores");
 });
 console.log("\n" + n + " grupos de pruebas correctos");

@@ -16,10 +16,10 @@ const FOLIO = "BMR-2027-0001";
 // Datos evidentemente ficticios.
 const DATOS = {
   nombres: "Postulante de Prueba", apellidos: "Ficticio Ejemplo", rut: "11111111-1", telefono: "+56 9 0000 0000",
-  domicilio: "Calle Falsa 123, Rengo", correo: "prueba@example.com",
+  domicilio: "Calle Falsa 123, Rengo", correo: "prueba@example.com", fechaNacimiento: "2005-05-10",
   banco: "Banco de Prueba", numCuenta: "000123456", institucion: "Universidad de Prueba", carrera: "Carrera Ficticia", promedio: "6,2"
 };
-const SELECTORES = { titular: "Postulante", tipoCuenta: "Cuenta vista", anio: "2", tramo: "40%" };
+const SELECTORES = { titular: "Postulante", tipoCuenta: "Cuenta vista", anio: "2", tramo: "40%", tipoInstitucion: "Universidad", areaCarrera: "Salud" };
 const OBLIGATORIOS = ["cedula", "alumno_regular", "notas", "rsh", "residencia", "declaracion"];
 const PDF = Buffer.from("%PDF-1.4\n% archivo de prueba\n%%EOF\n");
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
@@ -59,6 +59,7 @@ async function abrir(browser, { endpoint, respuesta, ancho } = {}) {
 async function llenar(page) {
   for (const [id, valor] of Object.entries(DATOS)) await page.fill("#" + id, valor);
   for (const [id, valor] of Object.entries(SELECTORES)) await page.selectOption("#" + id, valor);
+  await page.selectOption("#sector", { index: 1 });            // primer sector de la lista
   await page.check("#gastos input >> nth=0");
   for (const [i, k] of OBLIGATORIOS.entries()) {
     await page.setInputFiles("#doc_" + k, i % 2
@@ -121,6 +122,7 @@ prueba("validaciones: RUT, tutor, promedio mínimo, teléfono, correo y archivos
   assert.match(await texto(page, "#msj_telefono"), /teléfono válido/);
   assert.match(await texto(page, "#msj_correo"), /correo válido/);
   assert.match(await texto(page, "#msj_promedio"), /mínimo de 6,0/);
+  assert.match(await texto(page, "#msj_fechaNacimiento"), /indica 18 o más/, "la casilla de menor debe coincidir con la fecha");
   assert.match(await texto(page, "#salida"), /3 documentos sin adjuntar/, "ser menor de edad agrega tres documentos");
   assert.strictEqual(await page.evaluate(() => document.activeElement.id), "rut");
   // RUT del tutor igual al del postulante.
@@ -194,9 +196,11 @@ prueba("c) envío con servicio simulado: muestra el folio y envía el JSON esper
   assert.match(req.headers()["content-type"] || "", /^text\/plain/, "cuerpo text/plain, sin consulta previa CORS");
   const j = JSON.parse(req.postData());
   assert.deepStrictEqual(Object.keys(j).sort(), ["archivos", "datos", "familia"]);
-  assert.deepStrictEqual(Object.keys(j.datos).sort(), ["anio", "apellidos", "banco", "carrera", "correo", "credCuidador", "credDiscapacidad",
-    "credDiscapacidadFamiliar", "domicilio", "gastos", "institucion", "menor", "nombres", "numCuenta", "programaFamilias", "promedio",
-    "rut", "telefono", "tipoCuenta", "titular", "tramo", "tutorNombre", "tutorRut"]);
+  assert.deepStrictEqual(Object.keys(j.datos).sort(), ["anio", "apellidos", "areaCarrera", "banco", "carrera", "correo", "credCuidador", "credDiscapacidad",
+    "credDiscapacidadFamiliar", "domicilio", "fechaNacimiento", "gastos", "institucion", "menor", "nombres", "numCuenta", "programaFamilias", "promedio",
+    "rut", "sector", "telefono", "tipoCuenta", "tipoInstitucion", "titular", "tramo", "tutorNombre", "tutorRut"]);
+  assert.strictEqual(j.datos.fechaNacimiento, "2005-05-10");
+  assert.strictEqual(j.datos.tipoInstitucion, "Universidad"); assert.strictEqual(j.datos.areaCarrera, "Salud");
   assert.strictEqual(j.datos.rut, "11.111.111-1");
   assert.strictEqual(j.datos.promedio, "6.2", "la coma decimal se envía como punto");
   assert.strictEqual(j.datos.menor, false);
