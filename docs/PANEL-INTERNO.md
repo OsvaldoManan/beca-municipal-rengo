@@ -93,4 +93,20 @@ El día de la apertura, abra el proyecto en Apps Script, elija la función `envi
 
 ## Cifras públicas
 
-Durante el período de postulación, la sección «Estado y resultados» del sitio muestra el total de postulaciones recibidas, la cantidad por tramo del Registro Social de Hogares y la cantidad por día. El servicio entrega solo esos totales. No entrega nombres, RUT, correos ni ningún otro dato que identifique a una persona. Para dejar de publicarlas, cambie `PUBLICAR_CIFRAS` a `false` en `Code.gs` y publique una versión nueva.
+Durante el período de postulación, la sección «Estado y resultados» del sitio muestra en vivo el total de postulaciones recibidas y la cantidad por día, por tramo del Registro Social de Hogares, por unidad vecinal, por tipo de institución, por área de la carrera y por rango de edad. El servicio entrega solo esos totales. No entrega nombres, RUT, correos, fechas de nacimiento ni ningún otro dato que identifique a una persona.
+
+Cada cifra se publica por separado, sin cruces. Un grupo de 1 a 4 personas se muestra como «menos de 5», para que nadie pueda ser reconocido en una comuna pequeña. El umbral se ajusta con `UMBRAL_CIFRAS` en `Code.gs`. Para dejar de publicarlas, cambie `PUBLICAR_CIFRAS` a `false` y publique una versión nueva.
+
+## Panel interno de postulaciones
+
+El panel completo para el equipo de DIDECO es la pestaña «Resumen» de la hoja de cálculo. Solo la ven las personas con acceso a la hoja. Ejecute `prepararResumen()` una vez después de publicar esta versión, y otra vez si cambian las listas. Sus fórmulas se actualizan solas con cada postulación.
+
+Muestra los mismos conteos del sitio sin ocultar grupos pequeños, la revisión de admisibilidad y dos cruces, unidad vecinal por tipo de institución y área de la carrera por tramo.
+
+## Listas del formulario
+
+- Unidades vecinales. Son las 21 unidades vecinales, 9 urbanas y 12 rurales, del documento «Diagnóstico Unidades Vecinales. 9 urbanas 12 rurales» de la Secretaría de Planificación Comunal (catastro al 2 de abril de 2026). El documento indica que la estructura está en actualización durante 2026, de modo que conviene confirmarla antes de cada proceso. Se agrega la opción «No sé a qué unidad vecinal pertenezco».
+- Tipo de institución. Universidad, instituto profesional o centro de formación técnica.
+- Área de la carrera. Las diez áreas del conocimiento que usa el Servicio de Información de Educación Superior del Mineduc.
+
+Las listas viven en `Code.gs` (`SECTORES`, `TIPOS_INSTITUCION`, `AREAS_CARRERA`) y en `index.html`. Deben coincidir, y `tests/backend.test.js` lo verifica.

@@ -6,7 +6,7 @@ Nota práctica para quienes administran el sitio y la recepción de postulacione
 
 | Tipo de dato | Ejemplos |
 | --- | --- |
-| Identificación y contacto | Nombres, apellidos, RUT, teléfono, domicilio, correo |
+| Identificación y contacto | Nombres, apellidos, RUT, fecha de nacimiento, teléfono, domicilio, unidad vecinal, correo |
 | Datos bancarios | Titular, banco, tipo y número de cuenta |
 | Situación socioeconómica | Tramo y cartola del Registro Social de Hogares, participación en el programa Familias, Seguridades y Oportunidades |
 | Salud y discapacidad | Credencial de discapacidad propia o de un familiar, credencial de cuidador |
@@ -18,7 +18,7 @@ Parte de esta información es sensible y parte corresponde a menores de edad y a
 
 El aviso de apertura guarda aparte, en la pestaña «Recordatorios», solo el correo de quien lo pide y la fecha. Se usa únicamente para avisar que abrió la postulación. Conviene borrar esa pestaña al cerrar el proceso.
 
-Las cifras públicas del sitio son totales agregados, sin datos que identifiquen a una persona.
+Las cifras públicas del sitio son totales agregados, sin datos que identifiquen a una persona. Se publican sin cruces y los grupos de menos de 5 personas se muestran como «menos de 5». La fecha de nacimiento se usa solo para calcular rangos de edad y comprobar la condición de menor de edad. Nunca se publica.
 
 ## Dónde quedan los datos
 
