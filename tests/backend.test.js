@@ -44,8 +44,10 @@ function entorno(opc = {}) {
     Utilities: {
       base64Decode: t => { if (!/^[A-Za-z0-9+/]*={0,2}$/.test(t)) throw new Error("base64"); return Array.from(new Int8Array(Buffer.from(t, "base64"))); },
       newBlob: (bytes, tipo, nombre) => ({ getName: () => nombre, getBytes: () => bytes, tipo }),
-      formatDate: (f, zona) => { const p = new Intl.DateTimeFormat("en-CA", { timeZone: zona, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(f);
-        const g = t => p.find(x => x.type === t).value; return g("year") + "-" + Number(g("month")) + "-" + Number(g("day")); }
+      formatDate: (f, zona, patron = "yyyy-M-d") => { const p = new Intl.DateTimeFormat("en-CA", { timeZone: zona, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(f);
+        const g = t => Number(p.find(x => x.type === t).value), dos = n => (n < 10 ? "0" : "") + n;
+        if (patron === "yyyy-MM-dd") return g("year") + "-" + dos(g("month")) + "-" + dos(g("day"));
+        return g("year") + "-" + g("month") + "-" + g("day"); }
     }
   };
   vm.createContext(ctx);
@@ -188,17 +190,23 @@ caso("candado ocupado: se pide reintentar y no se registra nada", () => {
   assert.strictEqual(r.ok, false); assert.match(r.error, /Intente nuevamente en un minuto/);
   assert.strictEqual(m.filas.length, 0); assert.strictEqual(m.liberados, 0);
 });
-caso("plazo del artículo 9 en hora de Chile y control activable", () => {
+caso("período de postulación en hora de Chile y control activable", () => {
   const m = entorno(), en = t => m.ctx.enPlazo(new Date(t));
-  assert.strictEqual(en("2027-03-01T03:00:00Z"), true, "1 de marzo 00:00 en Chile");
-  assert.strictEqual(en("2027-03-01T02:59:00Z"), false, "28 de febrero 23:59 en Chile");
-  assert.strictEqual(en("2027-03-31T02:59:00Z"), true, "30 de marzo 23:59 en Chile");
-  assert.strictEqual(en("2027-03-31T03:01:00Z"), false, "31 de marzo en Chile");
-  assert.strictEqual(en("2026-03-15T15:00:00Z"), false, "otro año");
+  assert.match(CODIGO_REAL, /const PLAZO_INICIO = '2026-11-26';/); assert.match(CODIGO_REAL, /const PLAZO_FIN = '2027-01-01';/);
+  const sitio = fs.readFileSync(path.join(__dirname, "..", "js", "complementos.js"), "utf8");
+  assert.match(sitio, /var PLAZO_INICIO = "2026-11-26";/, "el sitio y el servicio deben usar el mismo período");
+  assert.match(sitio, /var PLAZO_FIN = "2027-01-01";/, "el sitio y el servicio deben usar el mismo período");
+  assert.strictEqual(en("2026-11-26T03:00:00Z"), true, "26 de noviembre 00:00 en Chile");
+  assert.strictEqual(en("2026-11-26T02:59:00Z"), false, "25 de noviembre 23:59 en Chile");
+  assert.strictEqual(en("2026-12-31T15:00:00Z"), true, "31 de diciembre");
+  assert.strictEqual(en("2027-01-02T02:59:00Z"), true, "1 de enero 23:59 en Chile");
+  assert.strictEqual(en("2027-01-02T03:01:00Z"), false, "2 de enero en Chile");
+  assert.strictEqual(en("2027-03-15T15:00:00Z"), false, "marzo queda fuera de este período");
+  assert.strictEqual(m.ctx.fechaLarga("2027-01-01"), "1 de enero de 2027");
   assert.ok(/const CONTROLAR_PLAZO = (true|false);/.test(CODIGO_REAL));
   const activo = entorno({ codigo: CODIGO.replace(/const CONTROLAR_PLAZO = (true|false);/, "const CONTROLAR_PLAZO = true;") });
   const r = activo.post(postulacion()), hoyEnPlazo = activo.ctx.enPlazo(new Date());
-  assert.strictEqual(r.ok, hoyEnPlazo); if (!hoyEnPlazo) assert.match(r.error, /1 al 30 de marzo de 2027/);
+  assert.strictEqual(r.ok, hoyEnPlazo); if (!hoyEnPlazo) assert.match(r.error, /26 de noviembre de 2026 al 1 de enero de 2027/);
 });
 caso("doGet entrega un estado breve sin datos", () => {
   const m = entorno(), j = JSON.parse(m.ctx.doGet().texto);
@@ -232,7 +240,7 @@ caso("aviso de apertura: guarda el correo una vez y lo envía solo dentro del pl
   m.ctx.enPlazo = () => true;
   assert.match(m.ctx.enviarRecordatorios(), /enviados: 1\. Pendientes: 0/);
   assert.strictEqual(m.correos[0].to, "estudiante@example.com");
-  assert.match(m.correos[0].body, /1 al 30 de marzo de 2027/);
+  assert.match(m.correos[0].body, /26 de noviembre de 2026 al 1 de enero de 2027/);
   assert.strictEqual(Object.prototype.toString.call(h[1][2]), "[object Date]", "queda la fecha de envío");
   assert.match(m.ctx.enviarRecordatorios(), /enviados: 0\./, "no se envía dos veces");
   const sinCuota = entorno({ cuota: 20 });

@@ -46,7 +46,8 @@ async function abrir(browser, { endpoint, respuesta, ancho } = {}) {
     });
   }
   // Cualquier otra salida a internet (que no sean fuentes o archivos locales) queda registrada.
-  page.on("request", r => { if (/^https?:/.test(r.url()) && r.url() !== endpoint && !/fonts\.(googleapis|gstatic)\.com/.test(r.url())) envios.push(r); });
+  // La consulta de cifras públicas (GET ?cifras=1, sin datos personales) se hace sola durante el período, por eso no cuenta como envío.
+  page.on("request", r => { if (/^https?:/.test(r.url()) && r.url() !== endpoint && r.url() !== endpoint + "?cifras=1" && !/fonts\.(googleapis|gstatic)\.com/.test(r.url())) envios.push(r); });
   await page.goto(PAGINA);
   await page.waitForSelector("#doc_cedula", { state: "attached" });
   // El formulario abre paso a paso. Estas pruebas recorren todos los campos, por eso usan la vista completa

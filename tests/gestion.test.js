@@ -11,17 +11,30 @@ const grupo = (n, fn) => { fn(); grupos++; console.log("ok    " + n); };
 // ── Plazo (js/complementos.js) ──
 const sitio = vm.createContext({});
 vm.runInContext(leer("js/complementos.js"), sitio);
-grupo("plazo: antes, durante y después del 1 al 30 de marzo", () => {
-  const e = (a, m, d) => { const r = sitio.estadoPlazo({ anio: a, mes: m, dia: d }, 2027); return [r.fase, r.dias]; };
-  assert.deepStrictEqual(e(2026, 11, 20), ["antes", 101]);
-  assert.deepStrictEqual(e(2027, 2, 28), ["antes", 1]);
-  assert.deepStrictEqual(e(2027, 3, 1), ["abierto", 29]);
-  assert.deepStrictEqual(e(2027, 3, 30), ["abierto", 0]);
-  assert.deepStrictEqual(e(2027, 3, 31), ["cerrado", 1]);
+grupo("plazo: antes, durante y después del período, con cambio de año", () => {
+  const e = (a, m, d) => { const r = sitio.estadoPlazo({ anio: a, mes: m, dia: d }, "2026-11-26", "2027-01-01"); return [r.fase, r.dias]; };
+  assert.deepStrictEqual(e(2026, 11, 20), ["antes", 6]);
+  assert.deepStrictEqual(e(2026, 11, 26), ["abierto", 36]);
+  assert.deepStrictEqual(e(2026, 12, 31), ["abierto", 1]);
+  assert.deepStrictEqual(e(2027, 1, 1), ["abierto", 0]);
+  assert.deepStrictEqual(e(2027, 1, 2), ["cerrado", 1]);
+  // El plazo de la ordenanza (1 al 30 de marzo) sigue funcionando con las mismas funciones.
+  const m = (a, mm, d) => sitio.estadoPlazo({ anio: a, mes: mm, dia: d }, "2027-03-01", "2027-03-30").fase;
+  assert.deepStrictEqual([m(2027, 2, 28), m(2027, 3, 1), m(2027, 3, 30), m(2027, 3, 31)], ["antes", "abierto", "abierto", "cerrado"]);
 });
 
-grupo("cuenta regresiva hacia el 1 de marzo, hora de Chile", () => {
-  const meta = sitio.aperturaPostulacion(2027);
+grupo("fechas escritas y serie diaria del período", () => {
+  assert.strictEqual(sitio.fechaLarga("2027-01-01"), "1 de enero de 2027");
+  assert.strictEqual(sitio.fechaLarga("2026-11-26", false), "26 de noviembre");
+  const serie = sitio.seriePeriodo({ "2026-12-31": 3, "2027-01-01": 2, "2027-03-05": 9 }, "2026-11-26", "2027-01-01");
+  assert.strictEqual(serie.length, 37);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(serie[0])), { fecha: "2026-11-26", rotulo: "26 de noviembre", n: 0 });
+  assert.deepStrictEqual(Array.from(serie.slice(-2), x => x.n), [3, 2]);
+  assert.strictEqual(serie.reduce((a, x) => a + x.n, 0), 5, "los días fuera del período no se cuentan");
+});
+
+grupo("cuenta regresiva hacia la apertura del 1 de marzo, hora de Chile", () => {
+  const meta = sitio.aperturaPostulacion("2027-03-01");
   assert.strictEqual(new Date(meta).toISOString(), "2027-03-01T03:00:00.000Z");
   const t = sitio.tiempoRestante(Date.UTC(2027, 1, 27, 1, 59, 30), meta);                // 26 de febrero, 22:59:30 en Chile
   assert.deepStrictEqual([t.dias, t.horas, t.minutos, t.segundos], [2, 1, 0, 30]);
