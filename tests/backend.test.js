@@ -281,7 +281,11 @@ caso("campos nuevos: listas cerradas, fecha de nacimiento y coherencia con la ca
   const C = m.filas[0], f = m.filas[1];
   assert.strictEqual(f[C.indexOf("Sector")], SECTOR); assert.strictEqual(f[C.indexOf("Tipo de institución")], "Universidad");
   assert.strictEqual(f[C.indexOf("Área de la carrera")], "Salud"); assert.strictEqual(String(f[C.indexOf("Fecha de nacimiento")]).replace(/^'/, ""), "2005-05-10");
-  assert.strictEqual(f[C.indexOf("Tramo RSH")], "40%");
+  assert.strictEqual(f[C.indexOf("Tramo RSH")], "'40%", "el tramo se guarda como texto para que Sheets no lo convierta en 0,4");
+  assert.strictEqual(m.ctx.tramoComoTexto(0.4), "40%"); assert.strictEqual(m.ctx.tramoComoTexto("'60%"), "60%"); assert.strictEqual(m.ctx.tramoComoTexto(1), "100%");
+  f[C.indexOf("Tramo RSH")] = 0.4;   // así queda si Sheets lo convierte en número
+  const j = JSON.parse(m.ctx.doGet({ parameter: { cifras: "1" } }).texto);
+  assert.strictEqual(j.porTramo["40%"], null, "el 0,4 cuenta como tramo 40% (oculto por ser menos de 5)");
 });
 caso("las listas del formulario coinciden con las del servicio", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
