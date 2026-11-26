@@ -299,6 +299,30 @@ function armarResumen(nombrePrincipal) {
   filas.push(['', ''], ['Postulaciones por tramo del Registro Social de Hogares', '']);
   var colTramo = letra(COLUMNAS.indexOf('Tramo RSH') + 1);
   ['40%', '50%', '60%', '70%', '80%', '90%', '100%'].forEach(function (t) { filas.push(['Tramo ' + t, '=COUNTIF(' + p + colTramo + '2:' + colTramo + ',"' + t + '")']); });
+  // Conteos por unidad vecinal, tipo de institución, área y rango de edad. A diferencia del sitio, aquí no se ocultan grupos pequeños.
+  var porLista = function (titulo, nombreCol, lista) {
+    var c = letra(COLUMNAS.indexOf(nombreCol) + 1);
+    filas.push(['', ''], [titulo, '']);
+    lista.forEach(function (v) { filas.push([v, '=COUNTIF(' + p + c + '2:' + c + ',"' + v.replace(/"/g, '""') + '")']); });
+  };
+  porLista('Postulaciones por unidad vecinal', 'Sector', SECTORES);
+  porLista('Postulaciones por tipo de institución', 'Tipo de institución', TIPOS_INSTITUCION);
+  porLista('Postulaciones por área de la carrera', 'Área de la carrera', AREAS_CARRERA);
+  var cNac = letra(COLUMNAS.indexOf('Fecha de nacimiento') + 1), rango = p + cNac + '2:' + cNac;
+  var edad = 'IFERROR(DATEDIF(DATEVALUE(' + rango + '),TODAY(),"Y"),-1)';
+  filas.push(['', ''], ['Postulaciones por rango de edad', '']);
+  [[0, 17], [18, 19], [20, 24], [25, 29], [30, 200]].forEach(function (r, i) {
+    filas.push([RANGOS_EDAD[i], '=SUMPRODUCT((' + edad + '>=' + r[0] + ')*(' + edad + '<=' + r[1] + '))']);
+  });
+  // Cruces que se actualizan solos. Cada tabla ocupa varias filas y columnas hacia la derecha.
+  var tabla = function (filaCol, colCol) {
+    var a = letra(COLUMNAS.indexOf(filaCol) + 1), b = letra(COLUMNAS.indexOf(colCol) + 1), ult = letra(COLUMNAS.length);
+    return '=IFERROR(QUERY(' + p + 'A1:' + ult + ',"select ' + a + ', count(A) where A is not null group by ' + a + ' pivot ' + b + '",1),"Sin datos")';
+  };
+  filas.push(['', ''], ['Cruce unidad vecinal y tipo de institución', tabla('Sector', 'Tipo de institución')]);
+  for (var k = 0; k < SECTORES.length + 1; k++) filas.push(['', '']);
+  filas.push(['Cruce área de la carrera y tramo', tabla('Área de la carrera', 'Tramo RSH')]);
+  for (var j = 0; j < AREAS_CARRERA.length + 1; j++) filas.push(['', '']);
   filas.push(['', ''], ['Revisión de admisibilidad', '']);
   var colAdm = letra(COLUMNAS.length + 1);
   filas.push(['Admisibles', '=COUNTIF(' + p + colAdm + '2:' + colAdm + ',"Sí")'], ['Inadmisibles', '=COUNTIF(' + p + colAdm + '2:' + colAdm + ',"No")'],

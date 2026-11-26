@@ -62,10 +62,26 @@ const TIPOS_CUENTA = ['Cuenta vista', 'Cuenta corriente'];
 const ANIOS = ['1', '2', '3', '4', '5'];
 const TRAMOS = ['40%', '50%', '60%', '70%', '80%', '90%', '100%'];
 const GASTOS = ['Matrícula o arancel', 'Insumos y materiales', 'Traslados', 'Arriendo'];
+// Listas cerradas para las cifras del proceso. Deben coincidir con las opciones de index.html (la prueba de backend lo verifica).
+const TIPOS_INSTITUCION = ['Universidad', 'Instituto profesional', 'Centro de formación técnica'];
+// Áreas del conocimiento que usa el Servicio de Información de Educación Superior (SIES) del Mineduc.
+const AREAS_CARRERA = ['Administración y comercio', 'Agropecuaria', 'Arte y arquitectura', 'Ciencias básicas', 'Ciencias sociales',
+  'Derecho', 'Educación', 'Humanidades', 'Salud', 'Tecnología'];
+// Unidades vecinales de la comuna, 9 urbanas y 12 rurales, según el diagnóstico de Unidades Vecinales de la Secretaría
+// de Planificación Comunal (catastro al 2 de abril de 2026, estructura en actualización durante 2026). Ver docs/PANEL-INTERNO.md.
+const SECTORES = ['Valle del Claro Sur', 'Villa Deseada', 'Arturo Pratt', 'La Isla',
+  'Juan Egenau', 'La Central', 'Carlos Condell', 'Capitán Benigno Román',
+  'Rosario Urbano', 'Villa del Cobil', 'Rio Claro - Lo Cartagena', 'Rinconada de Malambo',
+  'La Chimba', 'La Progresista', 'El Cerrillo', 'Lo de Lobos',
+  'Apalta', 'Pueblo Hundido - Los Gomeros', 'Campo Lindo', 'Camarico - Las Pataguas',
+  'Chanqueahue', 'No sé a qué unidad vecinal pertenezco'];
+// Rangos de edad que se publican. La fecha de nacimiento nunca sale de la hoja.
+const RANGOS_EDAD = ['17 años o menos', '18 y 19 años', '20 a 24 años', '25 a 29 años', '30 años o más'];
 
 const COLUMNAS = ['Folio', 'Fecha de recepción', 'Nombres', 'Apellidos', 'RUT', 'Teléfono', 'Domicilio', 'Correo',
+  'Fecha de nacimiento', 'Sector',
   'Menor de edad', 'Tutor', 'RUT tutor', 'Titular cuenta', 'Banco', 'Tipo de cuenta', 'N° de cuenta',
-  'Institución', 'Carrera', 'Año que cursa', 'Promedio', 'Gastos a cubrir', 'Tramo RSH',
+  'Institución', 'Tipo de institución', 'Carrera', 'Área de la carrera', 'Año que cursa', 'Promedio', 'Gastos a cubrir', 'Tramo RSH',
   'Credencial discapacidad', 'Credencial discapacidad familiar', 'Credencial cuidador', 'Programa Familias',
   'Grupo familiar', 'Documentos recibidos', 'Carpeta', 'Observaciones'];
 
@@ -99,6 +115,8 @@ const RESERVA_CORREOS = 20;
 
 // Cifras agregadas del proceso, sin datos personales, que el sitio muestra en «Estado y resultados».
 const PUBLICAR_CIFRAS = true;
+// Un grupo con menos personas que este umbral se publica como «menos de 5», para que nadie pueda ser identificado.
+const UMBRAL_CIFRAS = 5;
 const NOMBRES_DOCUMENTOS = { cedula: 'Cédula de identidad', alumno_regular: 'Certificado de alumno regular', notas: 'Certificado de notas',
   rsh: 'Cartola Registro Social de Hogares', residencia: 'Certificado de residencia', declaracion: 'Declaración jurada simple',
   discapacidad: 'Credencial de discapacidad', cuidador: 'Credencial de cuidador', fud: 'Formulario Único de Derivación',
@@ -159,6 +177,7 @@ function doPost(e) {
 
     var hoja = SpreadsheetApp.openById(HOJA_ID).getSheets()[0];
     if (hoja.getLastRow() === 0) hoja.appendRow(COLUMNAS);
+    else if (hoja.getLastRow() === 1) hoja.getRange(1, 1, 1, COLUMNAS.length).setValues([COLUMNAS]);   // encabezados al día si aún no hay postulaciones
     var numero = 1;
     var filas = hoja.getLastRow() - 1;
     if (filas > 0) {
@@ -181,8 +200,9 @@ function doPost(e) {
       carpeta = DriveApp.getFolderById(CARPETA_ID).createFolder(nombreCarpeta(folio + ' ' + d.apellidos + ' ' + d.nombres));
       adjuntos.forEach(function (b) { carpeta.createFile(b); });
       hoja.appendRow([folio, new Date(), d.nombres, d.apellidos, d.rut, d.telefono, d.domicilio, d.correo,
+        "'" + d.fechaNacimiento, d.sector,
         siNo(d.menor), d.tutorNombre, d.tutorRut, d.titular, d.banco, d.tipoCuenta, "'" + d.numCuenta,
-        d.institucion, d.carrera, Number(d.anio), d.promedio, d.gastos.join(', '), d.tramo,
+        d.institucion, d.tipoInstitucion, d.carrera, d.areaCarrera, Number(d.anio), d.promedio, d.gastos.join(', '), d.tramo,
         siNo(d.credDiscapacidad), siNo(d.credDiscapacidadFamiliar), siNo(d.credCuidador), siNo(d.programaFamilias),
         familia.map(function (f) { return f.join(' | '); }).join('\n'),
         adjuntos.map(function (b) { return b.getName(); }).join(', '), carpeta.getUrl(), ''].map(celda));
@@ -285,7 +305,8 @@ function validarDatos(x) {
   var exigidos = { nombres: 'los nombres', apellidos: 'los apellidos', rut: 'el RUT', telefono: 'el teléfono',
     domicilio: 'el domicilio', correo: 'el correo electrónico', titular: 'el titular de la cuenta', banco: 'el banco',
     tipoCuenta: 'el tipo de cuenta', numCuenta: 'el número de cuenta', institucion: 'la institución',
-    carrera: 'la carrera', anio: 'el año que cursa', promedio: 'el promedio de notas', tramo: 'el tramo del Registro Social de Hogares' };
+    carrera: 'la carrera', anio: 'el año que cursa', fechaNacimiento: 'la fecha de nacimiento', sector: 'la unidad vecinal donde vive',
+    tipoInstitucion: 'el tipo de institución', areaCarrera: 'el área de la carrera', promedio: 'el promedio de notas', tramo: 'el tramo del Registro Social de Hogares' };
   Object.keys(exigidos).forEach(function (k) {
     d[k] = texto(x[k], k === 'correo' ? 120 : 150);
     if (!d[k]) throw new Rechazo('Falta ' + exigidos[k] + '.');
@@ -300,6 +321,11 @@ function validarDatos(x) {
   if (TIPOS_CUENTA.indexOf(d.tipoCuenta) < 0) throw new Rechazo('El tipo de cuenta no es válido.');
   if (ANIOS.indexOf(d.anio) < 0) throw new Rechazo('El año que cursa no es válido.');
   if (TRAMOS.indexOf(d.tramo) < 0) throw new Rechazo('El tramo del Registro Social de Hogares no es válido.');
+  if (SECTORES.indexOf(d.sector) < 0) throw new Rechazo('La unidad vecinal donde vive no es válida.');
+  if (TIPOS_INSTITUCION.indexOf(d.tipoInstitucion) < 0) throw new Rechazo('El tipo de institución no es válido.');
+  if (AREAS_CARRERA.indexOf(d.areaCarrera) < 0) throw new Rechazo('El área de la carrera no es válida.');
+  var edad = edadEn(d.fechaNacimiento, Utilities.formatDate(new Date(), ZONA_HORARIA, 'yyyy-MM-dd'));
+  if (edad === null || edad < 14 || edad > 90) throw new Rechazo('La fecha de nacimiento no es válida.');
 
   // Artículo 7 d. Promedio NEM 6,0 para primer año y 5,0 desde segundo año.
   var nota = d.promedio.replace(',', '.');
@@ -315,6 +341,10 @@ function validarDatos(x) {
   if (!d.gastos.length || d.gastos.length !== x.gastos.length) throw new Rechazo('Indique en qué usará la beca.');
 
   d.menor = x.menor === true;
+  if (d.menor !== edad < 18) {
+    throw new Rechazo(d.menor ? 'Marcó que tiene menos de 18 años, pero la fecha de nacimiento indica 18 o más.' :
+      'Según su fecha de nacimiento tiene menos de 18 años. Marque esa casilla y agregue los datos de su tutor.');
+  }
   d.credDiscapacidad = x.credDiscapacidad === true;
   d.credDiscapacidadFamiliar = x.credDiscapacidadFamiliar === true;
   d.credCuidador = x.credCuidador === true;
@@ -623,25 +653,69 @@ function enviarRecordatorios() {
 }
 
 /**
- * Cifras agregadas para el sitio: total de postulaciones, postulaciones por día y por tramo del RSH.
- * No entrega nombres, RUT, correos ni ningún otro dato que identifique a una persona.
+ * Cifras agregadas para el sitio: total, postulaciones por día y conteos por tramo, sector, tipo de institución,
+ * área de la carrera y rango de edad. Cada dimensión se cuenta por separado, sin cruces.
+ * Un grupo de 1 a UMBRAL_CIFRAS - 1 personas se entrega como null y el sitio lo muestra como «menos de 5».
+ * No entrega nombres, RUT, correos, fechas de nacimiento ni ningún otro dato que identifique a una persona.
  */
 function cifrasProceso() {
   if (!PUBLICAR_CIFRAS) return { ok: false, error: 'Cifras no disponibles.' };
   var hoja = SpreadsheetApp.openById(HOJA_ID).getSheets()[0];
-  var n = Math.max(0, hoja.getLastRow() - 1), total = 0, porTramo = {}, porDia = {};
-  TRAMOS.forEach(function (t) { porTramo[t] = 0; });
+  var n = Math.max(0, hoja.getLastRow() - 1), total = 0, porDia = {};
+  var vacio = function (lista) { var o = {}; lista.forEach(function (k) { o[k] = 0; }); return o; };
+  var c = { porTramo: vacio(TRAMOS), porSector: vacio(SECTORES), porTipoInstitucion: vacio(TIPOS_INSTITUCION),
+    porArea: vacio(AREAS_CARRERA), porEdad: vacio(RANGOS_EDAD) };
+  var col = function (nombre) { return COLUMNAS.indexOf(nombre); };
+  var hoy = Utilities.formatDate(new Date(), ZONA_HORARIA, 'yyyy-MM-dd');
+  var sumar = function (o, k) { if (o.hasOwnProperty(k)) o[k]++; };
   if (n > 0) {
-    hoja.getRange(2, 1, n, 21).getValues().forEach(function (f) {   // columnas A (folio) a U (tramo)
+    hoja.getRange(2, 1, n, COLUMNAS.length).getValues().forEach(function (f) {
       if (!/^BMR-/.test(String(f[0]))) return;
       total++;
-      var tramo = String(f[20]);
-      if (porTramo.hasOwnProperty(tramo)) porTramo[tramo]++;
       if (f[1] instanceof Date) { var dia = Utilities.formatDate(f[1], ZONA_HORARIA, 'yyyy-MM-dd'); porDia[dia] = (porDia[dia] || 0) + 1; }
+      sumar(c.porTramo, String(f[col('Tramo RSH')]));
+      sumar(c.porSector, String(f[col('Sector')]));
+      sumar(c.porTipoInstitucion, String(f[col('Tipo de institución')]));
+      sumar(c.porArea, String(f[col('Área de la carrera')]));
+      var nac = f[col('Fecha de nacimiento')];
+      if (nac instanceof Date) nac = Utilities.formatDate(nac, ZONA_HORARIA, 'yyyy-MM-dd');
+      var r = rangoEdad(edadEn(String(nac).replace(/^'/, ''), hoy));
+      if (r) sumar(c.porEdad, r);
     });
   }
-  return { ok: true, proceso: ANIO_PROCESO, total: total, porTramo: porTramo, porDia: porDia,
+  var salida = { ok: true, proceso: ANIO_PROCESO, total: total, porDia: porDia, umbral: UMBRAL_CIFRAS,
     actualizado: Utilities.formatDate(new Date(), ZONA_HORARIA, 'dd-MM-yyyy HH:mm') };
+  Object.keys(c).forEach(function (k) { salida[k] = resguardar(c[k]); });
+  return salida;
+}
+
+/** Reemplaza por null los conteos de 1 a UMBRAL_CIFRAS - 1. El 0 se mantiene. */
+function resguardar(conteos) {
+  var o = {};
+  Object.keys(conteos).forEach(function (k) { var v = conteos[k]; o[k] = v > 0 && v < UMBRAL_CIFRAS ? null : v; });
+  return o;
+}
+
+/** Edad cumplida en la fecha «hoy», ambas con la forma AAAA-MM-DD. Devuelve null si la fecha no es válida. */
+function edadEn(nacimiento, hoy) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(nacimiento)), h = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(hoy));
+  if (!m || !h) return null;
+  var a = Number(m[1]), me = Number(m[2]), di = Number(m[3]);
+  var f = new Date(Date.UTC(a, me - 1, di));
+  if (f.getUTCFullYear() !== a || f.getUTCMonth() !== me - 1 || f.getUTCDate() !== di) return null;
+  if (String(nacimiento) > String(hoy)) return null;
+  var edad = Number(h[1]) - a;
+  if (Number(h[2]) < me || (Number(h[2]) === me && Number(h[3]) < di)) edad--;
+  return edad;
+}
+
+function rangoEdad(edad) {
+  if (edad === null || edad === undefined || isNaN(edad)) return '';
+  if (edad <= 17) return RANGOS_EDAD[0];
+  if (edad <= 19) return RANGOS_EDAD[1];
+  if (edad <= 24) return RANGOS_EDAD[2];
+  if (edad <= 29) return RANGOS_EDAD[3];
+  return RANGOS_EDAD[4];
 }
 
 function rechazar(mensaje) { return responder({ ok: false, error: mensaje }); }
