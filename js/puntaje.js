@@ -42,10 +42,15 @@ function puntosRendimiento(anio, nota) {
   return 100;
 }
 
-/** Puntos por tramo del Registro Social de Hogares. Acepta 40, "40" o "40%". null si el tramo no existe. */
+/**
+ * Puntos por tramo del Registro Social de Hogares. Acepta 40, "40", "40%" y también 0,4, que es como Google Sheets
+ * guarda «40%» cuando lo convierte en número. null si el tramo no existe.
+ */
 function puntosRsh(tramo) {
-  var t = parseInt(String(tramo === null || tramo === undefined ? '' : tramo).replace('%', ''), 10);
-  return PUNTAJE_RSH.hasOwnProperty(t) ? PUNTAJE_RSH[t] : null;
+  var n = Number(String(tramo === null || tramo === undefined ? '' : tramo).replace('%', '').replace(',', '.').trim());
+  if (n > 0 && n <= 1) n = n * 100;
+  var t = Math.round(n);
+  return n === t && PUNTAJE_RSH.hasOwnProperty(t) ? PUNTAJE_RSH[t] : null;
 }
 
 /** Puntos por condición de vulnerabilidad. c = {discapacidad, cuidador, familias, discapacidadFamiliar}. */
